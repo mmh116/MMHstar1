@@ -455,344 +455,593 @@ const App = () => {
 
   const dailySummary = calculateDailySummary();
 
-  // --- Function to Parse User Input into Structured Bet Entries ---
-  const parseEntryInput = (input) => {
-    const parsed = [];
-    const errors = [];
-    const lines = input.split('\n').map(line => line.trim()).filter(line => line.length > 0);
+// --- Function to Parse User Input into Structured Bet Entries ---
+const parseEntryInput = (input) => {
+  const parsed = [];
+  const errors = [];
+  const lines = input.split('\n').map(line => line.trim()).filter(line => line.length > 0);
 
-    const parseLine = (line) => {
-      const cleanLine = line.replace(/\s/g, '');
-      let matchFound = false;
+  let currentReverseAmount = null;
+  let currentEqualsMainAmount = null;
+  let currentEqualsReverseAmount = null;
 
-      const patterns = {
-        doubles: /^အပူး(\d+)$/,
-        consecutivePairs: /^ညီကို(\d+)$/,
-        fullPower: /^ပါဝါ(\d+)$/,
-        fullNakkat: /^နက္ခတ်(\d+)$/,
-        mixed: /^(\d{1,2})=(\d+)([Rr])(\d+)$/,
-        equal: /^(\d{1,2})=(\d+)$/,
-        reverse: /^(\d{1,2})[Rr](\d+)$/,
-        dotFormat: /^(\d{1,2}(?:\.\d{1,2})+)([Rr=])(\d+)$/,
-        slash: /^(\d{1,2})\/(\d{1,2})([Rr=])(\d+)$/,
-        hashFormat: /^(\d{1,2}(?:#\d{1,2})+)([Rr=])(\d+)$/,
-        kway: /^(\d+)\s*ခွေ\s*(\d+)$/,
-        topBottom: /^(\d)\s*(ထိပ်|ပိတ်)(\d+)$/,
-        par: /^(\d)\s*(ပါ|ပါတ်)(\d+)$/,
-        brake: /^(\d+)\s*ဘရိတ်\s*(\d+)$/,
-      };
+  const parseLine = (line) => {
+    const cleanLine = line.replace(/\s/g, '');
+    let matchFound = false;
 
-      let match;
+    let match;
+    
+    // =================== 1. "12ထိပ်300"၊ "1245ထိပ်600"၊ "987541236ထိပ်500" ပုံစံ ===================
+    if ((match = cleanLine.match(/^(\d{2,})ထိပ်(\d+)$/))) {
+      matchFound = true;
+      currentReverseAmount = null;
+      currentEqualsMainAmount = null;
+      currentEqualsReverseAmount = null;
+      const digits = match[1];
+      const amount = parseInt(match[2]);
 
-      if ((match = cleanLine.match(patterns.doubles))) {
-        matchFound = true;
-        const amount = parseInt(match[1]);
-        if (!isNaN(amount)) {
-          for (let i = 0; i <= 9; i++) {
+      if (!isNaN(amount) && digits.length >= 2) {
+        for (let i = 0; i < digits.length; i++) {
+          const digit = digits[i];
+          for (let j = 0; j < 10; j++) {
             parsed.push({
-              number: `${i}${i}`,
+              number: `${digit}${j}`,
               amount: amount
             });
           }
-        } else {
-          errors.push({
-            originalLine: line,
-            message: "ပမာဏ မှားယွင်းပါသည်။"
-          });
         }
-      } else if ((match = cleanLine.match(patterns.consecutivePairs))) {
-        matchFound = true;
-        const amount = parseInt(match[1]);
-        if (!isNaN(amount)) {
-          const consecutiveNumbers = new Set();
-          for (let i = 0; i < 10; i++) {
-            const nextDigit = (i + 1) % 10;
-            consecutiveNumbers.add(`${i}${nextDigit}`);
-            consecutiveNumbers.add(`${nextDigit}${i}`);
-          }
-          Array.from(consecutiveNumbers).forEach(num => parsed.push({
-            number: num,
-            amount: amount
-          }));
-        } else {
-          errors.push({
-            originalLine: line,
-            message: "ပမာဏ မှားယွင်းပါသည်။"
-          });
-        }
-      } else if ((match = cleanLine.match(patterns.fullPower))) {
-        matchFound = true;
-        const amount = parseInt(match[1]);
-        if (!isNaN(amount)) {
-          const powerNumbers = ['05', '50', '16', '61', '27', '72', '38', '83', '49', '94'];
-          powerNumbers.forEach(num => parsed.push({
-            number: num,
-            amount: amount
-          }));
-        } else {
-          errors.push({
-            originalLine: line,
-            message: "ပမာဏ မှားယွင်းပါသည်။"
-          });
-        }
-      } else if ((match = cleanLine.match(patterns.fullNakkat))) {
-        matchFound = true;
-        const amount = parseInt(match[1]);
-        if (!isNaN(amount)) {
-          const nakkatNumbers = ['18', '81', '24', '42', '35', '53', '69', '96', '07', '70'];
-          nakkatNumbers.forEach(num => parsed.push({
-            number: num,
-            amount: amount
-          }));
-        } else {
-          errors.push({
-            originalLine: line,
-            message: "ပမာဏ မှားယွင်းပါသည်။"
-          });
-        }
-      } else if ((match = cleanLine.match(patterns.mixed))) {
-        matchFound = true;
-        const num = match[1];
-        const amount1 = parseInt(match[2]);
-        const amount2 = parseInt(match[4]);
-        if (num.length === 2 && !isNaN(amount1) && !isNaN(amount2)) {
-          parsed.push({
-            number: num,
-            amount: amount1
-          });
-          const reversedNum = num[1] + num[0];
-          parsed.push({
-            number: reversedNum,
-            amount: amount2
-          });
-        } else {
-          errors.push({
-            originalLine: line,
-            message: "ဂဏန်း သို့မဟုတ် ပမာဏ မှားယွင်းပါသည်။"
-          });
-        }
-      } else if ((match = cleanLine.match(patterns.equal))) {
-        matchFound = true;
-        const num = match[1];
-        const amount = parseInt(match[2]);
-        if (num.length === 2 && !isNaN(amount)) {
-          parsed.push({
-            number: num,
-            amount: amount
-          });
-        } else {
-          errors.push({
-            originalLine: line,
-            message: "ဂဏန်း သို့မဟုတ် ပမာဏ မှားယွင်းပါသည်။"
-          });
-        }
-      } else if ((match = cleanLine.match(patterns.reverse))) {
-        matchFound = true;
-        const num = match[1];
-        const amount = parseInt(match[2]);
-        if (num.length === 2 && !isNaN(amount)) {
-          parsed.push({
-            number: num,
-            amount: amount
-          });
-          const reversedNum = num[1] + num[0];
-          parsed.push({
-            number: reversedNum,
-            amount: amount
-          });
-        } else {
-          errors.push({
-            originalLine: line,
-            message: "ဂဏန်း သို့မဟုတ် ပမာဏ မှားယွင်းပါသည်။"
-          });
-        }
-      } else if ((match = cleanLine.match(patterns.dotFormat))) {
-        matchFound = true;
-        const numsStr = match[1];
-        const operator = match[2];
-        const amount = parseInt(match[3]);
-        const numList = numsStr.split('.');
-        if (!isNaN(amount) && numList.every(n => n.length === 2 && !isNaN(parseInt(n)))) {
-          numList.forEach(num => {
-            parsed.push({
-              number: num,
-              amount: amount
-            });
-            if (operator.toLowerCase() === 'r') {
-              const reversedNum = num[1] + num[0];
-              parsed.push({
-                number: reversedNum,
-                amount: amount
-              });
-            }
-          });
-        } else {
-          errors.push({
-            originalLine: line,
-            message: "ဂဏန်း သို့မဟုတ် ပမာဏ မှားယွင်းပါသည်။"
-          });
-        }
-      } else if ((match = cleanLine.match(patterns.slash))) {
-        matchFound = true;
-        const numsStr = match[1] + '/' + match[2];
-        const operator = match[3];
-        const amount = parseInt(match[4]);
-        const numList = numsStr.split('/');
-        if (!isNaN(amount) && numList.every(n => n.length === 2 && !isNaN(parseInt(n)))) {
-          numList.forEach(num => {
-            parsed.push({
-              number: num,
-              amount: amount
-            });
-            if (operator.toLowerCase() === 'r') {
-              const reversedNum = num[1] + num[0];
-              parsed.push({
-                number: reversedNum,
-                amount: amount
-              });
-            }
-          });
-        } else {
-          errors.push({
-            originalLine: line,
-            message: "ဂဏန်း သို့မဟုတ် ပမာဏ မှားယွင်းပါသည်။"
-          });
-        }
-      } else if ((match = cleanLine.match(patterns.hashFormat))) {
-        matchFound = true;
-        const numsStr = match[1];
-        const operator = match[2];
-        const amount = parseInt(match[3]);
-        const numList = numsStr.split('#');
-        if (!isNaN(amount) && numList.every(n => n.length === 2 && !isNaN(parseInt(n)))) {
-          numList.forEach(num => {
-            parsed.push({
-              number: num,
-              amount: amount
-            });
-            if (operator.toLowerCase() === 'r') {
-              const reversedNum = num[1] + num[0];
-              parsed.push({
-                number: reversedNum,
-                amount: amount
-              });
-            }
-          });
-        } else {
-          errors.push({
-            originalLine: line,
-            message: "ဂဏန်း သို့မဟုတ် ပမာဏ မှားယွင်းပါသည်။"
-          });
-        }
-      } else if ((match = cleanLine.match(patterns.kway))) {
-        matchFound = true;
-        const digitsString = match[1];
-        const amount = parseInt(match[2]);
-        if (!isNaN(amount)) {
-          const kwayNumbers = generateKwayPermutations(digitsString);
-          if (kwayNumbers.length > 0) {
-            kwayNumbers.forEach(num => parsed.push({
-              number: num,
-              amount: amount
-            }));
-          } else {
-            errors.push({
-              originalLine: line,
-              message: `'${digitsString}' မှ ဂဏန်းတွဲများ ထုတ်၍ မရပါ။ ဂဏန်းအရေအတွက် အနည်းဆုံး ၂ လုံး လိုအပ်ပါသည်။`
-            });
-          }
-        } else {
-          errors.push({
-            originalLine: line,
-            message: "ပမာဏ မှားယွင်းပါသည်။"
-          });
-        }
-      } else if ((match = cleanLine.match(patterns.topBottom))) {
-        matchFound = true;
-        const digit = match[1];
-        const type = match[2];
-        const amount = parseInt(match[3]);
-        if (digit.length === 1 && !isNaN(amount)) {
-          for (let i = 0; i < 10; i++) {
-            let num;
-            if (type === 'ထိပ်') {
-              num = `${digit}${i}`;
-            } else {
-              num = `${i}${digit}`;
-            }
-            parsed.push({
-              number: num,
-              amount: amount
-            });
-          }
-        } else {
-          errors.push({
-            originalLine: line,
-            message: "ဂဏန်း သို့မဟုတ် ပမာဏ မှားယွင်းပါသည်။"
-          });
-        }
-      } else if ((match = cleanLine.match(patterns.par))) {
-        matchFound = true;
-        const digit = match[1];
-        const amount = parseInt(match[3]);
-        if (digit.length === 1 && !isNaN(amount)) {
-          const allNumbers = Array.from({
-            length: 100
-          }, (_, i) => String(i).padStart(2, '0'));
-          allNumbers.forEach(num => {
-            if (num.includes(digit)) {
-              parsed.push({
-                number: num,
-                amount: amount
-              });
-            }
-          });
-        } else {
-          errors.push({
-            originalLine: line,
-            message: "ဂဏန်း သို့မဟုတ် ပမာဏ မှားယွင်းပါသည်။"
-          });
-        }
-      } else if ((match = cleanLine.match(patterns.brake))) {
-        matchFound = true;
-        const brakeDigit = parseInt(match[1]);
-        const amount = parseInt(match[2]);
-        if (!isNaN(brakeDigit) && brakeDigit >= 0 && brakeDigit <= 9 && !isNaN(amount)) {
-          const brakeNumbers = generateBrakeNumbers(brakeDigit);
-          if (brakeNumbers.length > 0) {
-            brakeNumbers.forEach(num => parsed.push({
-              number: num,
-              amount: amount
-            }));
-          } else {
-            errors.push({
-              originalLine: line,
-              message: `'${brakeDigit}' ဘရိတ်အတွက် ဂဏန်းများ ထုတ်၍ မရပါ။`
-            });
-          }
-        } else {
-          errors.push({
-            originalLine: line,
-            message: "ဘရိတ်ဂဏန်း သို့မဟုတ် ပမာဏ မှားယွင်းပါသည်။"
-          });
-        }
-      }
-
-      if (!matchFound) {
+      } else {
         errors.push({
           originalLine: line,
-          message: "မမှန်ကန်သော ထိုးကြေးပုံစံ။"
+          message: "ဂဏန်း သို့မဟုတ် ပမာဏ မှားယွင်းပါသည်။"
         });
       }
-    };
+    }
+    // =================== 2. "12ပိတ်300"၊ "1245ပိတ်600" ပုံစံ ===================
+    else if ((match = cleanLine.match(/^(\d{2,})ပိတ်(\d+)$/))) {
+      matchFound = true;
+      currentReverseAmount = null;
+      currentEqualsMainAmount = null;
+      currentEqualsReverseAmount = null;
+      const digits = match[1];
+      const amount = parseInt(match[2]);
 
-    lines.forEach(line => parseLine(line));
+      if (!isNaN(amount) && digits.length >= 2) {
+        for (let i = 0; i < digits.length; i++) {
+          const digit = digits[i];
+          for (let j = 0; j < 10; j++) {
+            parsed.push({
+              number: `${j}${digit}`,
+              amount: amount
+            });
+          }
+        }
+      } else {
+        errors.push({
+          originalLine: line,
+          message: "ဂဏန်း သို့မဟုတ် ပမာဏ မှားယွင်းပါသည်။"
+        });
+      }
+    }
+    // =================== 3. "56R500" ပုံစံ (ရိုးရိုး R) ===================
+    else if ((match = cleanLine.match(/^(\d{2})[Rr](\d+)$/))) {
+      matchFound = true;
+      const num = match[1];
+      currentReverseAmount = parseInt(match[2]);
+      currentEqualsMainAmount = null;
+      currentEqualsReverseAmount = null;
 
-    return {
-      parsed,
-      errors
-    };
+      if (num.length === 2 && !isNaN(currentReverseAmount)) {
+        parsed.push({
+          number: num,
+          amount: currentReverseAmount
+        });
+        const reversedNum = num[1] + num[0];
+        parsed.push({
+          number: reversedNum,
+          amount: currentReverseAmount
+        });
+      } else {
+        errors.push({
+          originalLine: line,
+          message: "R ကြေညာချက်တွင် ဂဏန်း သို့မဟုတ် ပမာဏ မှားယွင်းနေပါသည်။"
+        });
+      }
+    }
+    // =================== 4. "50=700r300" ပုံစံ (အဓိက အသစ်) ===================
+    else if ((match = cleanLine.match(/^(\d{2})=(\d+)[Rr](\d+)$/))) {
+      matchFound = true;
+      const num = match[1];
+      const mainAmount = parseInt(match[2]);
+      const reverseAmount = parseInt(match[3]);
+      
+      currentReverseAmount = null;
+      currentEqualsMainAmount = mainAmount;
+      currentEqualsReverseAmount = reverseAmount;
+
+      if (num.length === 2 && !isNaN(mainAmount) && !isNaN(reverseAmount)) {
+        parsed.push({
+          number: num,
+          amount: mainAmount
+        });
+        const reversedNum = num[1] + num[0];
+        parsed.push({
+          number: reversedNum,
+          amount: reverseAmount
+        });
+      } else {
+        errors.push({
+          originalLine: line,
+          message: "=R format တွင် ဂဏန်း သို့မဟုတ် ပမာဏ မှားယွင်းနေပါသည်။"
+        });
+      }
+    }
+    // =================== 5. ရိုးရိုး R amount သတ်မှတ်ပြီးသားဆိုရင် ===================
+    else if (currentReverseAmount !== null && /^\d{2}$/.test(cleanLine)) {
+      matchFound = true;
+      const num = cleanLine;
+      if (num.length === 2) {
+        parsed.push({
+          number: num,
+          amount: currentReverseAmount
+        });
+        const reversedNum = num[1] + num[0];
+        parsed.push({
+          number: reversedNum,
+          amount: currentReverseAmount
+        });
+      }
+    }
+    // =================== 6. =R format ကနေ values သတ်မှတ်ပြီးသားဆိုရင် (အဓိက အသစ်) ===================
+    else if (currentEqualsMainAmount !== null && currentEqualsReverseAmount !== null && /^\d{2}$/.test(cleanLine)) {
+      matchFound = true;
+      const num = cleanLine;
+      if (num.length === 2) {
+        parsed.push({
+          number: num,
+          amount: currentEqualsMainAmount
+        });
+        const reversedNum = num[1] + num[0];
+        parsed.push({
+          number: reversedNum,
+          amount: currentEqualsReverseAmount
+        });
+      }
+    }
+    // =================== 7. တစ်ခြား ရှိပြီးသား pattern များ ===================
+    else {
+      matchFound = parseExistingPatterns(cleanLine, line, parsed, errors);
+      if (matchFound) {
+        currentReverseAmount = null;
+        currentEqualsMainAmount = null;
+        currentEqualsReverseAmount = null;
+      }
+    }
+
+    if (!matchFound) {
+      errors.push({
+        originalLine: line,
+        message: "မမှန်ကန်သော ထိုးကြေးပုံစံ။"
+      });
+    }
   };
+
+  lines.forEach(line => parseLine(line));
+  return {
+    parsed,
+    errors
+  };
+};
+
+// =================== ရှိပြီးသား pattern များအတွက် function ===================
+const parseExistingPatterns = (cleanLine, originalLine, parsed, errors) => {
+  let matchFound = false;
+  let match;
+  
+  const patterns = {
+    doubles: /^အပူး(\d+)$/,
+    consecutivePairs: /^ညီကို(\d+)$/,
+    fullPower: /^ပါဝါ(\d+)$/,
+    fullNakkat: /^နက္ခတ်(\d+)$/,
+    mixed: /^(\d{1,2})=(\d+)([Rr])(\d+)$/,
+    diffReverseFormat: /^(\d{1,2}(?:\.\d{1,2})*)=(\d+)[Rr](\d+)$/,
+    equal: /^(\d{1,2})=(\d+)$/,
+    reverse: /^(\d{1,2})[Rr](\d+)$/,
+    dotFormat: /^(\d{1,2}(?:\.\d{1,2})+)([Rr=])(\d+)$/,
+    slash: /^(\d{1,2})\/(\d{1,2})([Rr=])(\d+)$/,
+    hashFormat: /^(\d{1,2}(?:#\d{1,2})+)([Rr=])(\d+)$/,
+    kway: /^(\d+)\s*ခွေ\s*(\d+)$/,
+    kwayPue: /^(\d+)\s*(ခွေပူး|ခွေအပူး)\s*(\d+)$/,
+    topBottom: /^(\d)\s*(ထိပ်|ပိတ်)(\d+)$/,
+    par: /^(\d)\s*(ပါ|ပါတ်)(\d+)$/,
+    brake: /^(\d+)\s*ဘရိတ်\s*(\d+)$/,
+  };
+
+  // Doubles
+  if ((match = cleanLine.match(patterns.doubles))) {
+    matchFound = true;
+    const amount = parseInt(match[1]);
+    if (!isNaN(amount)) {
+      for (let i = 0; i <= 9; i++) {
+        parsed.push({
+          number: `${i}${i}`,
+          amount: amount
+        });
+      }
+    } else {
+      errors.push({
+        originalLine: originalLine,
+        message: "ပမာဏ မှားယွင်းပါသည်။"
+      });
+    }
+  }
+  // Consecutive Pairs
+  else if ((match = cleanLine.match(patterns.consecutivePairs))) {
+    matchFound = true;
+    const amount = parseInt(match[1]);
+    if (!isNaN(amount)) {
+      const consecutiveNumbers = new Set();
+      for (let i = 0; i < 10; i++) {
+        const nextDigit = (i + 1) % 10;
+        consecutiveNumbers.add(`${i}${nextDigit}`);
+        consecutiveNumbers.add(`${nextDigit}${i}`);
+      }
+      Array.from(consecutiveNumbers).forEach(num => parsed.push({
+        number: num,
+        amount: amount
+      }));
+    } else {
+      errors.push({
+        originalLine: originalLine,
+        message: "ပမာဏ မှားယွင်းပါသည်။"
+      });
+    }
+  }
+  // Full Power
+  else if ((match = cleanLine.match(patterns.fullPower))) {
+    matchFound = true;
+    const amount = parseInt(match[1]);
+    if (!isNaN(amount)) {
+      const powerNumbers = ['05', '50', '16', '61', '27', '72', '38', '83', '49', '94'];
+      powerNumbers.forEach(num => parsed.push({
+        number: num,
+        amount: amount
+      }));
+    } else {
+      errors.push({
+        originalLine: originalLine,
+        message: "ပမာဏ မှားယွင်းပါသည်။"
+      });
+    }
+  }
+  // Full Nakkat
+  else if ((match = cleanLine.match(patterns.fullNakkat))) {
+    matchFound = true;
+    const amount = parseInt(match[1]);
+    if (!isNaN(amount)) {
+      const nakkatNumbers = ['18', '81', '24', '42', '35', '53', '69', '96', '07', '70'];
+      nakkatNumbers.forEach(num => parsed.push({
+        number: num,
+        amount: amount
+      }));
+    } else {
+      errors.push({
+        originalLine: originalLine,
+        message: "ပမာဏ မှားယွင်းပါသည်။"
+      });
+    }
+  }
+  // Mixed (e.g., "12=300R500")
+  else if ((match = cleanLine.match(patterns.mixed))) {
+    matchFound = true;
+    const num = match[1];
+    const amount1 = parseInt(match[2]);
+    const amount2 = parseInt(match[4]);
+    if (num.length === 2 && !isNaN(amount1) && !isNaN(amount2)) {
+      parsed.push({
+        number: num,
+        amount: amount1
+      });
+      const reversedNum = num[1] + num[0];
+      parsed.push({
+        number: reversedNum,
+        amount: amount2
+      });
+    } else {
+      errors.push({
+        originalLine: originalLine,
+        message: "ဂဏန်း သို့မဟုတ် ပမာဏ မှားယွင်းပါသည်။"
+      });
+    }
+  }
+  // Equal (e.g., "12=300")
+  else if ((match = cleanLine.match(patterns.equal))) {
+    matchFound = true;
+    const num = match[1];
+    const amount = parseInt(match[2]);
+    if (num.length === 2 && !isNaN(amount)) {
+      parsed.push({
+        number: num,
+        amount: amount
+      });
+    } else {
+      errors.push({
+        originalLine: originalLine,
+        message: "ဂဏန်း သို့မဟုတ် ပမာဏ မှားယွင်းပါသည်။"
+      });
+    }
+  }
+  // Reverse (e.g., "12R300")
+  else if ((match = cleanLine.match(patterns.reverse))) {
+    matchFound = true;
+    const num = match[1];
+    const amount = parseInt(match[2]);
+    if (num.length === 2 && !isNaN(amount)) {
+      parsed.push({
+        number: num,
+        amount: amount
+      });
+      const reversedNum = num[1] + num[0];
+      parsed.push({
+        number: reversedNum,
+        amount: amount
+      });
+    } else {
+      errors.push({
+        originalLine: originalLine,
+        message: "ဂဏန်း သို့မဟုတ် ပမာဏ မှားယွင်းပါသည်။"
+      });
+    }
+  }
+  // Diff Reverse Format (e.g., "12.34=500R200")
+  else if ((match = cleanLine.match(patterns.diffReverseFormat))) {
+    matchFound = true;
+    const numsStr = match[1];
+    const mainAmount = parseInt(match[2]);
+    const reverseAmount = parseInt(match[3]);
+    const numList = numsStr.split('.');
+
+    if (!isNaN(mainAmount) && !isNaN(reverseAmount)) {
+      numList.forEach(num => {
+        if (num.length === 2) {
+          parsed.push({
+            number: num,
+            amount: mainAmount
+          });
+          const reversedNum = num[1] + num[0];
+          parsed.push({
+            number: reversedNum,
+            amount: reverseAmount
+          });
+        }
+      });
+    } else {
+      errors.push({
+        originalLine: originalLine,
+        message: "ဂဏန်း သို့မဟုတ် ပမာဏ မှားယွင်းပါသည်။"
+      });
+    }
+  }
+  // Dot Format (e.g., "12.34=R300")
+  else if ((match = cleanLine.match(patterns.dotFormat))) {
+    matchFound = true;
+    const numsStr = match[1];
+    const operator = match[2];
+    const amount = parseInt(match[3]);
+    const numList = numsStr.split('.');
+    if (!isNaN(amount) && numList.every(n => n.length === 2 && !isNaN(parseInt(n)))) {
+      numList.forEach(num => {
+        parsed.push({
+          number: num,
+          amount: amount
+        });
+        if (operator.toLowerCase() === 'r') {
+          const reversedNum = num[1] + num[0];
+          parsed.push({
+            number: reversedNum,
+            amount: amount
+          });
+        }
+      });
+    } else {
+      errors.push({
+        originalLine: originalLine,
+        message: "ဂဏန်း သို့မဟုတ် ပမာဏ မှားယွင်းပါသည်။"
+      });
+    }
+  }
+  // Slash Format (e.g., "12/34=R300")
+  else if ((match = cleanLine.match(patterns.slash))) {
+    matchFound = true;
+    const numsStr = match[1] + '/' + match[2];
+    const operator = match[3];
+    const amount = parseInt(match[4]);
+    const numList = numsStr.split('/');
+    if (!isNaN(amount) && numList.every(n => n.length === 2 && !isNaN(parseInt(n)))) {
+      numList.forEach(num => {
+        parsed.push({
+          number: num,
+          amount: amount
+        });
+        if (operator.toLowerCase() === 'r') {
+          const reversedNum = num[1] + num[0];
+          parsed.push({
+            number: reversedNum,
+            amount: amount
+          });
+        }
+      });
+    } else {
+      errors.push({
+        originalLine: originalLine,
+        message: "ဂဏန်း သို့မဟုတ် ပမာဏ မှားယွင်းပါသည်။"
+      });
+    }
+  }
+  // Hash Format (e.g., "12#34=R300")
+  else if ((match = cleanLine.match(patterns.hashFormat))) {
+    matchFound = true;
+    const numsStr = match[1];
+    const operator = match[2];
+    const amount = parseInt(match[3]);
+    const numList = numsStr.split('#');
+    if (!isNaN(amount) && numList.every(n => n.length === 2 && !isNaN(parseInt(n)))) {
+      numList.forEach(num => {
+        parsed.push({
+          number: num,
+          amount: amount
+        });
+        if (operator.toLowerCase() === 'r') {
+          const reversedNum = num[1] + num[0];
+          parsed.push({
+            number: reversedNum,
+            amount: amount
+          });
+        }
+      });
+    } else {
+      errors.push({
+        originalLine: originalLine,
+        message: "ဂဏန်း သို့မဟုတ် ပမာဏ မှားယွင်းပါသည်။"
+      });
+    }
+  }
+  // Kway
+  else if ((match = cleanLine.match(patterns.kway))) {
+    matchFound = true;
+    const digitsString = match[1];
+    const amount = parseInt(match[2]);
+    if (!isNaN(amount)) {
+      const kwayNumbers = generateKwayPermutations(digitsString);
+      if (kwayNumbers.length > 0) {
+        kwayNumbers.forEach(num => parsed.push({
+          number: num,
+          amount: amount
+        }));
+      } else {
+        errors.push({
+          originalLine: originalLine,
+          message: `'${digitsString}' မှ ဂဏန်းတွဲများ ထုတ်၍ မရပါ။ ဂဏန်းအရေအတွက် အနည်းဆုံး ၂ လုံး လိုအပ်ပါသည်။`
+        });
+      }
+    } else {
+      errors.push({
+        originalLine: originalLine,
+        message: "ပမာဏ မှားယွင်းပါသည်။"
+      });
+    }
+  }
+  // Kway Pue
+  else if ((match = cleanLine.match(patterns.kwayPue))) {
+    matchFound = true;
+    const digitsString = match[1];
+    const amount = parseInt(match[3]);
+    if (!isNaN(amount)) {
+      const kwayNumbers = generateKwayPermutations(digitsString);
+      kwayNumbers.forEach(num => parsed.push({
+        number: num,
+        amount: amount
+      }));
+      
+      const uniqueDigits = Array.from(new Set(digitsString.split(''))).sort();
+      uniqueDigits.forEach(digit => {
+        parsed.push({
+          number: `${digit}${digit}`,
+          amount: amount
+        });
+      });
+      
+      if (kwayNumbers.length === 0 && uniqueDigits.length === 0) {
+        errors.push({
+          originalLine: originalLine,
+          message: "ဂဏန်းတွဲများ ထုတ်၍ မရပါ။"
+        });
+      }
+    } else {
+      errors.push({
+        originalLine: originalLine,
+        message: "ပမာဏ မှားယွင်းပါသည်။"
+      });
+    }
+  }
+  // Top/Bottom (single digit - e.g., "5ထိပ်1000")
+  else if ((match = cleanLine.match(patterns.topBottom))) {
+    matchFound = true;
+    const digit = match[1];
+    const type = match[2];
+    const amount = parseInt(match[3]);
+    if (digit.length === 1 && !isNaN(amount)) {
+      for (let i = 0; i < 10; i++) {
+        let num;
+        if (type === 'ထိပ်') {
+          num = `${digit}${i}`;
+        } else {
+          num = `${i}${digit}`;
+        }
+        parsed.push({
+          number: num,
+          amount: amount
+        });
+      }
+    } else {
+      errors.push({
+        originalLine: originalLine,
+        message: "ဂဏန်း သို့မဟုတ် ပမာဏ မှားယွင်းပါသည်။"
+      });
+    }
+  }
+  // Par (e.g., "5ပါ1000")
+  else if ((match = cleanLine.match(patterns.par))) {
+    matchFound = true;
+    const digit = match[1];
+    const amount = parseInt(match[3]);
+    if (digit.length === 1 && !isNaN(amount)) {
+      const allNumbers = Array.from({
+        length: 100
+      }, (_, i) => String(i).padStart(2, '0'));
+      allNumbers.forEach(num => {
+        if (num.includes(digit)) {
+          parsed.push({
+            number: num,
+            amount: amount
+          });
+        }
+      });
+    } else {
+      errors.push({
+        originalLine: originalLine,
+        message: "ဂဏန်း သို့မဟုတ် ပမာဏ မှားယွင်းပါသည်။"
+      });
+    }
+  }
+  // Brake (e.g., "5ဘရိတ်1000")
+  else if ((match = cleanLine.match(patterns.brake))) {
+    matchFound = true;
+    const brakeDigit = parseInt(match[1]);
+    const amount = parseInt(match[2]);
+    if (!isNaN(brakeDigit) && brakeDigit >= 0 && brakeDigit <= 9 && !isNaN(amount)) {
+      const brakeNumbers = generateBrakeNumbers(brakeDigit);
+      if (brakeNumbers.length > 0) {
+        brakeNumbers.forEach(num => parsed.push({
+          number: num,
+          amount: amount
+        }));
+      } else {
+        errors.push({
+          originalLine: originalLine,
+          message: `'${brakeDigit}' ဘရိတ်အတွက် ဂဏန်းများ ထုတ်၍ မရပါ။`
+        });
+      }
+    } else {
+      errors.push({
+        originalLine: originalLine,
+        message: "ဘရိတ်ဂဏန်း သို့မဟုတ် ပမာဏ မှားယွင်းပါသည်။"
+      });
+    }
+  }
+
+  return matchFound;
+};
 
   // --- Add a new entry to Firestore ---
   const addEntry = async () => {
