@@ -464,8 +464,10 @@ const parseEntryInput = (input) => {
   let currentReverseAmount = null;
   let currentEqualsMainAmount = null;
   let currentEqualsReverseAmount = null;
+  // ✅ အသစ်: နောက်ဆုံး = amount ကို မှတ်ထားမယ် (တစ်လိုင်းချင်းဂဏန်းတွေအတွက်)
+  let lastEqualsAmount = null;
 
-  const parseLine = (line) => {
+  const parseLine = (line, lineIndex) => {
     const cleanLine = line.replace(/\s/g, '');
     let matchFound = false;
 
@@ -477,6 +479,7 @@ const parseEntryInput = (input) => {
       currentReverseAmount = null;
       currentEqualsMainAmount = null;
       currentEqualsReverseAmount = null;
+      lastEqualsAmount = null;
       const digits = match[1];
       const amount = parseInt(match[2]);
 
@@ -493,7 +496,8 @@ const parseEntryInput = (input) => {
       } else {
         errors.push({
           originalLine: line,
-          message: "ဂဏန်း သို့မဟုတ် ပမာဏ မှားယွင်းပါသည်။"
+          message: "ဂဏန်း သို့မဟုတ် ပမာဏ မှားယွင်းပါသည်။",
+          lineNumber: lineIndex + 1
         });
       }
     }
@@ -503,6 +507,7 @@ const parseEntryInput = (input) => {
       currentReverseAmount = null;
       currentEqualsMainAmount = null;
       currentEqualsReverseAmount = null;
+      lastEqualsAmount = null;
       const digits = match[1];
       const amount = parseInt(match[2]);
 
@@ -519,7 +524,8 @@ const parseEntryInput = (input) => {
       } else {
         errors.push({
           originalLine: line,
-          message: "ဂဏန်း သို့မဟုတ် ပမာဏ မှားယွင်းပါသည်။"
+          message: "ဂဏန်း သို့မဟုတ် ပမာဏ မှားယွင်းပါသည်။",
+          lineNumber: lineIndex + 1
         });
       }
     }
@@ -530,6 +536,7 @@ const parseEntryInput = (input) => {
       currentReverseAmount = parseInt(match[2]);
       currentEqualsMainAmount = null;
       currentEqualsReverseAmount = null;
+      lastEqualsAmount = null;
 
       if (num.length === 2 && !isNaN(currentReverseAmount)) {
         parsed.push({
@@ -544,7 +551,8 @@ const parseEntryInput = (input) => {
       } else {
         errors.push({
           originalLine: line,
-          message: "R ကြေညာချက်တွင် ဂဏန်း သို့မဟုတ် ပမာဏ မှားယွင်းနေပါသည်။"
+          message: "R ကြေညာချက်တွင် ဂဏန်း သို့မဟုတ် ပမာဏ မှားယွင်းနေပါသည်။",
+          lineNumber: lineIndex + 1
         });
       }
     }
@@ -558,6 +566,7 @@ const parseEntryInput = (input) => {
       currentReverseAmount = null;
       currentEqualsMainAmount = mainAmount;
       currentEqualsReverseAmount = reverseAmount;
+      lastEqualsAmount = mainAmount; // ✅ အသစ်: = amount ကို မှတ်
 
       if (num.length === 2 && !isNaN(mainAmount) && !isNaN(reverseAmount)) {
         parsed.push({
@@ -572,11 +581,67 @@ const parseEntryInput = (input) => {
       } else {
         errors.push({
           originalLine: line,
-          message: "=R format တွင် ဂဏန်း သို့မဟုတ် ပမာဏ မှားယွင်းနေပါသည်။"
+          message: "=R format တွင် ဂဏန်း သို့မဟုတ် ပမာဏ မှားယွင်းနေပါသည်။",
+          lineNumber: lineIndex + 1
         });
       }
     }
-    // =================== 5. ရိုးရိုး R amount သတ်မှတ်ပြီးသားဆိုရင် ===================
+    // =================== 5. "123ကို954ကပ်R500" ပုံစံ (အသစ်) ===================
+    else if ((match = cleanLine.match(/^(\d+)ကို(\d+)ကပ်[Rr](\d+)$/))) {
+      matchFound = true;
+      currentReverseAmount = null;
+      currentEqualsMainAmount = null;
+      currentEqualsReverseAmount = null;
+      lastEqualsAmount = null;
+
+      const firstDigits = match[1];
+      const secondDigits = match[2];
+      const amount = parseInt(match[3]);
+
+      if (!isNaN(amount) && firstDigits.length >= 1 && secondDigits.length >= 1) {
+        // ပထမ ဂဏန်းတွေကို တစ်လုံးချင်းစီခွဲမယ်
+        const firstDigitsArray = firstDigits.split('');
+        // ဒုတိယ ဂဏန်းတွေကို တစ်လုံးချင်းစီခွဲမယ်
+        const secondDigitsArray = secondDigits.split('');
+
+        // အဓိပ္ပာယ်က ပထမဂဏန်းတွေထဲက တစ်လုံးစီကို ဒုတိယဂဏန်းတွေထဲက တစ်လုံးစီနဲ့ ပေါင်းပြီး နှစ်လုံးတွဲထုတ်မယ်
+        // ဥပမာ: 123 နဲ့ 954 ဆိုရင်:
+        // 1 အတွက် 9,5,4 → 19, 15, 14
+        // 2 အတွက် 9,5,4 → 29, 25, 24
+        // 3 အတွက် 9,5,4 → 39, 35, 34
+        
+        const allNumbers = new Set();
+        
+        firstDigitsArray.forEach(firstDigit => {
+          secondDigitsArray.forEach(secondDigit => {
+            const twoDigitNumber = `${firstDigit}${secondDigit}`;
+            if (twoDigitNumber.length === 2) {
+              allNumbers.add(twoDigitNumber);
+            }
+          });
+        });
+
+        // allNumbers ကို parsed ထဲထည့် (ပြောင်းပြန်လည်း ထည့်မယ်)
+        Array.from(allNumbers).forEach(num => {
+          parsed.push({
+            number: num,
+            amount: amount
+          });
+          const reversedNum = num[1] + num[0];
+          parsed.push({
+            number: reversedNum,
+            amount: amount
+          });
+        });
+      } else {
+        errors.push({
+          originalLine: line,
+          message: "ဂဏန်း သို့မဟုတ် ပမာဏ မှားယွင်းပါသည်။",
+          lineNumber: lineIndex + 1
+        });
+      }
+    }
+    // =================== 6. ရိုးရိုး R amount သတ်မှတ်ပြီးသားဆိုရင် ===================
     else if (currentReverseAmount !== null && /^\d{2}$/.test(cleanLine)) {
       matchFound = true;
       const num = cleanLine;
@@ -592,7 +657,7 @@ const parseEntryInput = (input) => {
         });
       }
     }
-    // =================== 6. =R format ကနေ values သတ်မှတ်ပြီးသားဆိုရင် (အဓိက အသစ်) ===================
+    // =================== 7. =R format ကနေ values သတ်မှတ်ပြီးသားဆိုရင် (အဓိက အသစ်) ===================
     else if (currentEqualsMainAmount !== null && currentEqualsReverseAmount !== null && /^\d{2}$/.test(cleanLine)) {
       matchFound = true;
       const num = cleanLine;
@@ -608,25 +673,60 @@ const parseEntryInput = (input) => {
         });
       }
     }
-    // =================== 7. တစ်ခြား ရှိပြီးသား pattern များ ===================
+    // =================== 8. ✅ အသစ်: = amount သတ်မှတ်ပြီးသား ဂဏန်းတစ်လိုင်းချင်း ===================
+    else if (lastEqualsAmount !== null && /^\d{2}$/.test(cleanLine)) {
+      matchFound = true;
+      const num = cleanLine;
+      if (num.length === 2) {
+        parsed.push({
+          number: num,
+          amount: lastEqualsAmount
+        });
+        console.log(`Added ${num} with amount ${lastEqualsAmount} (inherited from previous = amount)`);
+      }
+    }
+    // =================== 9. တစ်ခြား ရှိပြီးသား pattern များ ===================
     else {
-      matchFound = parseExistingPatterns(cleanLine, line, parsed, errors);
+      // ✅ parseExistingPatterns ကို lastEqualsAmount reference ပေးဖို့ ပြင်ထားတယ်
+      const result = parseExistingPatterns(cleanLine, line, parsed, errors, lineIndex, lastEqualsAmount);
+      matchFound = result.matchFound;
+      
+      // ✅ ဒီ pattern ကနေ lastEqualsAmount ကို update လုပ်နိုင်တယ်
+      if (result.newLastEqualsAmount !== undefined) {
+        lastEqualsAmount = result.newLastEqualsAmount;
+      }
+      
       if (matchFound) {
         currentReverseAmount = null;
         currentEqualsMainAmount = null;
         currentEqualsReverseAmount = null;
+        // ✅ အချို့ pattern တွေအတွက် lastEqualsAmount ကို ဖျက်မယ်
+        if (!result.keepLastEqualsAmount) {
+          lastEqualsAmount = null;
+        }
       }
     }
 
     if (!matchFound) {
       errors.push({
         originalLine: line,
-        message: "မမှန်ကန်သော ထိုးကြေးပုံစံ။"
+        message: "မမှန်ကန်သော ထိုးကြေးပုံစံ။",
+        lineNumber: lineIndex + 1
       });
     }
+    
+    return lastEqualsAmount; // ✅ lastEqualsAmount ကို ပြန်ပေးမယ်
   };
 
-  lines.forEach(line => parseLine(line));
+  // ✅ စာကြောင်းတစ်ကြောင်းချင်းစီကို parse လုပ်မယ်
+  lines.forEach((line, index) => {
+    const updatedLastEqualsAmount = parseLine(line, index);
+    // ✅ parseLine ကနေ ပြန်လာတဲ့ lastEqualsAmount ကို update လုပ်မယ်
+    if (updatedLastEqualsAmount !== undefined) {
+      lastEqualsAmount = updatedLastEqualsAmount;
+    }
+  });
+  
   return {
     parsed,
     errors
@@ -634,9 +734,11 @@ const parseEntryInput = (input) => {
 };
 
 // =================== ရှိပြီးသား pattern များအတွက် function ===================
-const parseExistingPatterns = (cleanLine, originalLine, parsed, errors) => {
+const parseExistingPatterns = (cleanLine, originalLine, parsed, errors, lineIndex, currentLastEqualsAmount) => {
   let matchFound = false;
   let match;
+  let newLastEqualsAmount = undefined;
+  let keepLastEqualsAmount = false;
   
   const patterns = {
     doubles: /^အပူး(\d+)$/,
@@ -671,7 +773,8 @@ const parseExistingPatterns = (cleanLine, originalLine, parsed, errors) => {
     } else {
       errors.push({
         originalLine: originalLine,
-        message: "ပမာဏ မှားယွင်းပါသည်။"
+        message: "ပမာဏ မှားယွင်းပါသည်။",
+        lineNumber: lineIndex + 1
       });
     }
   }
@@ -693,7 +796,8 @@ const parseExistingPatterns = (cleanLine, originalLine, parsed, errors) => {
     } else {
       errors.push({
         originalLine: originalLine,
-        message: "ပမာဏ မှားယွင်းပါသည်။"
+        message: "ပမာဏ မှားယွင်းပါသည်။",
+        lineNumber: lineIndex + 1
       });
     }
   }
@@ -710,7 +814,8 @@ const parseExistingPatterns = (cleanLine, originalLine, parsed, errors) => {
     } else {
       errors.push({
         originalLine: originalLine,
-        message: "ပမာဏ မှားယွင်းပါသည်။"
+        message: "ပမာဏ မှားယွင်းပါသည်။",
+        lineNumber: lineIndex + 1
       });
     }
   }
@@ -727,7 +832,8 @@ const parseExistingPatterns = (cleanLine, originalLine, parsed, errors) => {
     } else {
       errors.push({
         originalLine: originalLine,
-        message: "ပမာဏ မှားယွင်းပါသည်။"
+        message: "ပမာဏ မှားယွင်းပါသည်။",
+        lineNumber: lineIndex + 1
       });
     }
   }
@@ -747,14 +853,17 @@ const parseExistingPatterns = (cleanLine, originalLine, parsed, errors) => {
         number: reversedNum,
         amount: amount2
       });
+      // ✅ mixed format မှာ = amount ကို မှတ်မယ်
+      newLastEqualsAmount = amount1;
     } else {
       errors.push({
         originalLine: originalLine,
-        message: "ဂဏန်း သို့မဟုတ် ပမာဏ မှားယွင်းပါသည်။"
+        message: "ဂဏန်း သို့မဟုတ် ပမာဏ မှားယွင်းပါသည်။",
+        lineNumber: lineIndex + 1
       });
     }
   }
-  // Equal (e.g., "12=300")
+  // Equal (e.g., "12=300") - ✅ အဓိကပြင်ရမယ့်နေရာ
   else if ((match = cleanLine.match(patterns.equal))) {
     matchFound = true;
     const num = match[1];
@@ -764,10 +873,14 @@ const parseExistingPatterns = (cleanLine, originalLine, parsed, errors) => {
         number: num,
         amount: amount
       });
+      // ✅ အသစ်: = amount ကို မှတ်မယ် (တစ်လိုင်းချင်းဂဏန်းတွေအတွက်)
+      newLastEqualsAmount = amount;
+      keepLastEqualsAmount = true;
     } else {
       errors.push({
         originalLine: originalLine,
-        message: "ဂဏန်း သို့မဟုတ် ပမာဏ မှားယွင်းပါသည်။"
+        message: "ဂဏန်း သို့မဟုတ် ပမာဏ မှားယွင်းပါသည်။",
+        lineNumber: lineIndex + 1
       });
     }
   }
@@ -789,7 +902,8 @@ const parseExistingPatterns = (cleanLine, originalLine, parsed, errors) => {
     } else {
       errors.push({
         originalLine: originalLine,
-        message: "ဂဏန်း သို့မဟုတ် ပမာဏ မှားယွင်းပါသည်။"
+        message: "ဂဏန်း သို့မဟုတ် ပမာဏ မှားယွင်းပါသည်။",
+        lineNumber: lineIndex + 1
       });
     }
   }
@@ -815,10 +929,13 @@ const parseExistingPatterns = (cleanLine, originalLine, parsed, errors) => {
           });
         }
       });
+      // ✅ diff reverse format မှာ = amount ကို မှတ်မယ်
+      newLastEqualsAmount = mainAmount;
     } else {
       errors.push({
         originalLine: originalLine,
-        message: "ဂဏန်း သို့မဟုတ် ပမာဏ မှားယွင်းပါသည်။"
+        message: "ဂဏန်း သို့မဟုတ် ပမာဏ မှားယွင်းပါသည်။",
+        lineNumber: lineIndex + 1
       });
     }
   }
@@ -843,10 +960,16 @@ const parseExistingPatterns = (cleanLine, originalLine, parsed, errors) => {
           });
         }
       });
+      // ✅ dot format မှာ amount ကို မှတ်မယ်
+      if (operator === '=') {
+        newLastEqualsAmount = amount;
+        keepLastEqualsAmount = true;
+      }
     } else {
       errors.push({
         originalLine: originalLine,
-        message: "ဂဏန်း သို့မဟုတ် ပမာဏ မှားယွင်းပါသည်။"
+        message: "ဂဏန်း သို့မဟုတ် ပမာဏ မှားယွင်းပါသည်။",
+        lineNumber: lineIndex + 1
       });
     }
   }
@@ -871,10 +994,16 @@ const parseExistingPatterns = (cleanLine, originalLine, parsed, errors) => {
           });
         }
       });
+      // ✅ slash format မှာ amount ကို မှတ်မယ်
+      if (operator === '=') {
+        newLastEqualsAmount = amount;
+        keepLastEqualsAmount = true;
+      }
     } else {
       errors.push({
         originalLine: originalLine,
-        message: "ဂဏန်း သို့မဟုတ် ပမာဏ မှားယွင်းပါသည်။"
+        message: "ဂဏန်း သို့မဟုတ် ပမာဏ မှားယွင်းပါသည်။",
+        lineNumber: lineIndex + 1
       });
     }
   }
@@ -899,10 +1028,16 @@ const parseExistingPatterns = (cleanLine, originalLine, parsed, errors) => {
           });
         }
       });
+      // ✅ hash format မှာ amount ကို မှတ်မယ်
+      if (operator === '=') {
+        newLastEqualsAmount = amount;
+        keepLastEqualsAmount = true;
+      }
     } else {
       errors.push({
         originalLine: originalLine,
-        message: "ဂဏန်း သို့မဟုတ် ပမာဏ မှားယွင်းပါသည်။"
+        message: "ဂဏန်း သို့မဟုတ် ပမာဏ မှားယွင်းပါသည်။",
+        lineNumber: lineIndex + 1
       });
     }
   }
@@ -921,13 +1056,15 @@ const parseExistingPatterns = (cleanLine, originalLine, parsed, errors) => {
       } else {
         errors.push({
           originalLine: originalLine,
-          message: `'${digitsString}' မှ ဂဏန်းတွဲများ ထုတ်၍ မရပါ။ ဂဏန်းအရေအတွက် အနည်းဆုံး ၂ လုံး လိုအပ်ပါသည်။`
+          message: `'${digitsString}' မှ ဂဏန်းတွဲများ ထုတ်၍ မရပါ။ ဂဏန်းအရေအတွက် အနည်းဆုံး ၂ လုံး လိုအပ်ပါသည်။`,
+          lineNumber: lineIndex + 1
         });
       }
     } else {
       errors.push({
         originalLine: originalLine,
-        message: "ပမာဏ မှားယွင်းပါသည်။"
+        message: "ပမာဏ မှားယွင်းပါသည်။",
+        lineNumber: lineIndex + 1
       });
     }
   }
@@ -954,13 +1091,15 @@ const parseExistingPatterns = (cleanLine, originalLine, parsed, errors) => {
       if (kwayNumbers.length === 0 && uniqueDigits.length === 0) {
         errors.push({
           originalLine: originalLine,
-          message: "ဂဏန်းတွဲများ ထုတ်၍ မရပါ။"
+          message: "ဂဏန်းတွဲများ ထုတ်၍ မရပါ။",
+          lineNumber: lineIndex + 1
         });
       }
     } else {
       errors.push({
         originalLine: originalLine,
-        message: "ပမာဏ မှားယွင်းပါသည်။"
+        message: "ပမာဏ မှားယွင်းပါသည်။",
+        lineNumber: lineIndex + 1
       });
     }
   }
@@ -986,7 +1125,8 @@ const parseExistingPatterns = (cleanLine, originalLine, parsed, errors) => {
     } else {
       errors.push({
         originalLine: originalLine,
-        message: "ဂဏန်း သို့မဟုတ် ပမာဏ မှားယွင်းပါသည်။"
+        message: "ဂဏန်း သို့မဟုတ် ပမာဏ မှားယွင်းပါသည်။",
+        lineNumber: lineIndex + 1
       });
     }
   }
@@ -1010,7 +1150,8 @@ const parseExistingPatterns = (cleanLine, originalLine, parsed, errors) => {
     } else {
       errors.push({
         originalLine: originalLine,
-        message: "ဂဏန်း သို့မဟုတ် ပမာဏ မှားယွင်းပါသည်။"
+        message: "ဂဏန်း သို့မဟုတ် ပမာဏ မှားယွင်းပါသည်။",
+        lineNumber: lineIndex + 1
       });
     }
   }
@@ -1029,18 +1170,66 @@ const parseExistingPatterns = (cleanLine, originalLine, parsed, errors) => {
       } else {
         errors.push({
           originalLine: originalLine,
-          message: `'${brakeDigit}' ဘရိတ်အတွက် ဂဏန်းများ ထုတ်၍ မရပါ။`
+          message: `'${brakeDigit}' ဘရိတ်အတွက် ဂဏန်းများ ထုတ်၍ မရပါ။`,
+          lineNumber: lineIndex + 1
         });
       }
     } else {
       errors.push({
         originalLine: originalLine,
-        message: "ဘရိတ်ဂဏန်း သို့မဟုတ် ပမာဏ မှားယွင်းပါသည်။"
+        message: "ဘရိတ်ဂဏန်း သို့မဟုတ် ပမာဏ မှားယွင်းပါသည်။",
+        lineNumber: lineIndex + 1
       });
     }
   }
+  
+  // ✅ တစ်လိုင်းချင်း ဂဏန်းတွေကို lastEqualsAmount နဲ့ ယူတဲ့ကိစ္စကို ခွဲထုတ်ထားတယ်
+  // ဒါကို အပေါ်က parseLine function ထဲမှာ လုပ်ထားပြီးသားမို့ ဒီမှာ မလိုတော့ဘူး
 
-  return matchFound;
+  return {
+    matchFound,
+    newLastEqualsAmount,
+    keepLastEqualsAmount
+  };
+};
+
+// =================== အခြား helper functions ===================
+
+// generateKwayPermutations function (ခွေအတွက်)
+const generateKwayPermutations = (digitsString) => {
+  const digits = digitsString.split('');
+  if (digits.length < 2) return [];
+  
+  const permutations = [];
+  
+  for (let i = 0; i < digits.length; i++) {
+    for (let j = 0; j < digits.length; j++) {
+      if (i !== j) {
+        permutations.push(`${digits[i]}${digits[j]}`);
+      }
+    }
+  }
+  
+  // Remove duplicates
+  return [...new Set(permutations)];
+};
+
+// generateBrakeNumbers function (ဘရိတ်အတွက်)
+const generateBrakeNumbers = (brakeDigit) => {
+  const brakeNumbers = [];
+  
+  for (let i = 0; i < 100; i++) {
+    const numStr = String(i).padStart(2, '0');
+    const digit1 = parseInt(numStr[0]);
+    const digit2 = parseInt(numStr[1]);
+    
+    // ဘရိတ်ဂဏန်းကို ပေါင်းပြီး ဘရိတ်ဂဏန်းရှိရင်
+    if (digit1 + digit2 === brakeDigit) {
+      brakeNumbers.push(numStr);
+    }
+  }
+  
+  return brakeNumbers;
 };
 
   // --- Add a new entry to Firestore ---
@@ -1416,22 +1605,25 @@ const parseExistingPatterns = (cleanLine, originalLine, parsed, errors) => {
   };
 
   const executeDeleteCustomer = async () => {
-    if (!db || !dataIdentifier || !customerToDeleteId) {
-      setErrorMessage("User ID မရှိသေးပါ။ ကျေးဇူးပြု၍ User ID ထည့်သွင်းပါ။ သို့မဟုတ် Database မရပါ။");
-      return;
-    }
-    const appId = typeof window.__app_id !== 'undefined' ? window.__app_id : 'default-app-id';
-    try {
-      await window.firebase.deleteDoc(window.firebase.doc(customersCollectionRef, customerToDeleteId));
-      setErrorMessage("ထိုးသူအမည် ဖျက်ပြီးပါပြီ။");
-      setConfirmDeleteCustomerModal(false);
-      setCustomerToDeleteId(null);
-      setTimeout(() => setErrorMessage(''), 3000);
-    } catch (e) {
-      console.error("Error deleting customer:", e);
-      setErrorMessage("ထိုးသူအမည် ဖျက်ရာတွင် အမှားအယွင်းရှိခဲ့ပါသည်။");
-    }
-  };
+  if (!db || !dataIdentifier || !customerToDeleteId) {
+    setErrorMessage("User ID မရှိသေးပါ။ ကျေးဇူးပြု၍ User ID ထည့်သွင်းပါ။ သို့မဟုတ် Database မရပါ။");
+    return;
+  }
+  
+  const appId = typeof window.__app_id !== 'undefined' ? window.__app_id : 'default-app-id';
+  const customersCollectionRef = window.firebase.collection(db, `artifacts/${appId}/data_by_identifier/${dataIdentifier}/customers`); // ✅ ဒီလိုင်းကို ထည့်ရမယ်
+  
+  try {
+    await window.firebase.deleteDoc(window.firebase.doc(customersCollectionRef, customerToDeleteId)); // ✅ အခု မှန်ပြီ
+    setErrorMessage("ထိုးသူအမည် ဖျက်ပြီးပါပြီ။");
+    setConfirmDeleteCustomerModal(false);
+    setCustomerToDeleteId(null);
+    setTimeout(() => setErrorMessage(''), 3000);
+  } catch (e) {
+    console.error("Error deleting customer:", e);
+    setErrorMessage("ထိုးသူအ�မည် ဖျက်ရာတွင် အမှားအယွင်းရှိခဲ့ပါသည်။");
+  }
+};
 
   // --- Function to handle saving the user-provided data identifier ---
   const handleSaveDataIdentifier = () => {
