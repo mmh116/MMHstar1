@@ -2307,7 +2307,7 @@ const generateBrakeNumbers = (brakeDigit) => {
                 <span className="font-medium text-gray-600">ပေါက်</span>
                 <span className="text-right text-gray-800">{dailySummary.totalWinningBetAmount.toLocaleString()} ကျပ်</span>
 
-                <span className="font-medium text-gray-600">ယော်ငွေ</span>
+                <span className="font-medium text-gray-600">လျော်ငွေ</span>
                 <span className="text-right text-gray-800">{dailySummary.totalPayout.toLocaleString()} ကျပ်</span>
 
                 <div className="border-t pt-4 mt-4 col-span-2">
@@ -2368,7 +2368,7 @@ const generateBrakeNumbers = (brakeDigit) => {
                       <span className="font-medium text-gray-600">ပေါက်</span>
                       <span className="text-right text-gray-800">{monthlySummary.totalWinningBetAmount.toLocaleString()} ကျပ်</span>
 
-                      <span className="font-medium text-gray-600">ယော်ငွေ</span>
+                      <span className="font-medium text-gray-600">လျော်ငွေ</span>
                       <span className="text-right text-gray-800">{monthlySummary.totalPayout.toLocaleString()} ကျပ်</span>
 
                       <div className="border-t pt-4 mt-4 col-span-2">
@@ -2390,7 +2390,7 @@ const generateBrakeNumbers = (brakeDigit) => {
                         const sales = `ရောင်းရငွေ\t${monthlySummary.totalSales.toLocaleString()} ကျပ်\n`;
                         const commission = `ကော်မရှင်\t\t${monthlySummary.commission.toLocaleString()} ကျပ်\n`;
                         const winningBet = `ပေါက်\t\t\t${monthlySummary.totalWinningBetAmount.toLocaleString()} ကျပ်\n`;
-                        const payout = `ယော်ငွေ\t\t${monthlySummary.totalPayout.toLocaleString()} ကျပ်\n`;
+                        const payout = `လျော်ငွေ\t\t${monthlySummary.totalPayout.toLocaleString()} ကျပ်\n`;
                         const divider = `--------------------\n`;
                         const profitLossLabel = monthlySummary.profitLoss >= 0 ? 'အမြတ်' : 'အရှုံး';
                         const profitLoss = `${profitLossLabel}\t\t${Math.abs(monthlySummary.profitLoss).toLocaleString()} ကျပ်`;
