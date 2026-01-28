@@ -114,6 +114,45 @@ const generateBrakeNumbers = (brakeDigit) => {
 
 
 
+// =================== အသံထွက်ရန် function ===================
+
+const playSuccessSound = () => {
+  try {
+    const audioContext = new (window.AudioContext || window.webkitAudioContext)();
+    const oscillator = audioContext.createOscillator();
+    const gainNode = audioContext.createGain();
+    
+    oscillator.connect(gainNode);
+    gainNode.connect(audioContext.destination);
+    
+    // ပျော်စရာအသံ
+    oscillator.type = 'square';
+    
+    // တီတီတာတာအသံအတွက် frequency ကိုပြောင်းမယ်
+    oscillator.frequency.setValueAtTime(523.25, audioContext.currentTime); // C5
+    oscillator.frequency.setValueAtTime(659.25, audioContext.currentTime + 0.1); // E5
+    oscillator.frequency.setValueAtTime(783.99, audioContext.currentTime + 0.2); // G5
+    
+    gainNode.gain.setValueAtTime(0.3, audioContext.currentTime);
+    gainNode.gain.exponentialRampToValueAtTime(0.01, audioContext.currentTime + 0.3);
+    
+    oscillator.start(audioContext.currentTime);
+    oscillator.stop(audioContext.currentTime + 0.3);
+    
+  } catch (error) {
+    console.log("Audio error:", error);
+    try {
+      const beep = new Audio("data:audio/wav;base64,UklGRigAAABXQVZFZm10IBIAAAABAAEARKwAAIhYAQACABAAZGF0YQQAAAAAAA==");
+      beep.volume = 0.3;
+      beep.play();
+    } catch (e) {
+      console.log("All audio methods failed");
+    }
+  }
+};
+
+
+
 // Re-mapping Lucide React icons to simple inline SVGs
 
 const ChevronLeft = ({ size = 20, className = '' }) => <svg xmlns="http://www.w3.org/2000/svg" width={size} height={size} viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" className={className}><path d="m15 18-6-6 6-6"/></svg>;
@@ -2559,7 +2598,10 @@ const generateBrakeNumbers = (brakeDigit) => {
       const appId = typeof window.__app_id !== 'undefined' ? window.__app_id : 'default-app-id';
 
       await window.firebase.addDoc(window.firebase.collection(db, `artifacts/${appId}/data_by_identifier/${dataIdentifier}/entries`), newEntry);
-
+      
+      // ✅ အသံထွက်အသိပေးခြင်း
+      playSuccessSound();
+      
       setInputEntry('');
 
       setCustomerNameInput('');
@@ -3508,21 +3550,149 @@ const generateBrakeNumbers = (brakeDigit) => {
 
   // Render a loading spinner if Firebase is still initializing
 
-  if (isLoading) {
-
-    return (
-
-      <div className="min-h-screen bg-gray-100 flex flex-col items-center justify-center font-inter text-gray-800">
-
-        <Loader2 size={48} className="animate-spin text-blue-500 mb-4" />
-
-        <p className="text-lg font-semibold text-gray-700">🇲🇲 LOADING 🇲🇲...</p>
-
+  // Render a horse running loading animation
+if (isLoading) {
+  return (
+    <div 
+      className="min-h-screen bg-gradient-to-br from-amber-50 to-orange-50 flex flex-col items-center justify-center font-inter text-gray-800 px-4"
+      onClick={() => {
+        playStartupSound();
+        setTimeout(() => {
+          setIsLoading(false);
+        }, 100);
+      }}
+      style={{ cursor: 'pointer' }}
+    >
+      <div className="w-full max-w-md mb-8">
+        {/* Title */}
+        <div className="text-center mb-10">
+          <h1 className="text-3xl font-bold text-amber-800 mb-2">ဂဏန်းထိုးစာရင်း</h1>
+          <p className="text-gray-600">မြင်းပြေးနေဆဲ... ခဏစောင့်ပါ</p>
+        </div>
+        
+        {/* Horse Running Track */}
+        <div className="relative mb-12">
+          {/* Track Line */}
+          <div className="w-full h-1 bg-gray-300 rounded-full mb-8"></div>
+          
+          {/* Dotted Track Lines */}
+          <div className="absolute top-0 left-0 w-full h-1 flex justify-between">
+            {[...Array(20)].map((_, i) => (
+              <div key={i} className="w-1 h-1 bg-gray-400 rounded-full"></div>
+            ))}
+          </div>
+          
+          {/* Horse SVG Animation */}
+          <div className="absolute -top-10 left-0 animate-horse-run" style={{ animationDuration: '2s', animationIterationCount: 'infinite' }}>
+            <svg width="60" height="60" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
+              {/* Horse Body */}
+              <path d="M8 10L10 8L12 6L14 8L16 10" stroke="#92400e" strokeLinecap="round"/>
+              <path d="M10 8L8 12L6 14" stroke="#92400e"/>
+              <path d="M14 8L16 12L18 14" stroke="#92400e"/>
+              {/* Horse Legs */}
+              <path d="M7 14L7 18" stroke="#78350f" className="animate-leg-1"/>
+              <path d="M9 13L9 17" stroke="#78350f" className="animate-leg-2"/>
+              <path d="M15 13L15 17" stroke="#78350f" className="animate-leg-3"/>
+              <path d="M17 14L17 18" stroke="#78350f" className="animate-leg-4"/>
+              {/* Horse Head */}
+              <circle cx="18" cy="8" r="1.5" fill="#92400e"/>
+              <path d="M19 7L21 5" stroke="#92400e"/>
+              {/* Tail */}
+              <path d="M6 12L4 10L2 12" stroke="#92400e" strokeLinecap="round"/>
+            </svg>
+          </div>
+          
+          {/* Finish Line */}
+          <div className="absolute -top-4 right-0 flex flex-col items-center">
+            <div className="w-2 h-8 bg-red-500"></div>
+            <div className="w-2 h-8 bg-white"></div>
+            <div className="w-2 h-8 bg-red-500"></div>
+            <span className="text-xs mt-2 text-red-600 font-bold">FINISH</span>
+          </div>
+        </div>
+        
+        {/* Progress Text */}
+        <div className="text-center mb-6">
+          <div className="inline-flex items-center space-x-2 bg-amber-100 px-4 py-2 rounded-full">
+            <svg className="animate-spin h-4 w-4 text-amber-600" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24">
+              <circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4"></circle>
+              <path className="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z"></path>
+            </svg>
+            <span className="text-amber-700 font-medium">ဒေတာများ ပြင်ဆင်နေပါသည်...</span>
+          </div>
+        </div>
+        
+        {/* Progress Bar */}
+        <div className="w-full bg-gray-200 rounded-full h-3 mb-2">
+          <div 
+            className="bg-gradient-to-r from-amber-400 to-orange-500 h-3 rounded-full animate-pulse transition-all duration-1000" 
+            style={{ width: '75%' }}
+          ></div>
+        </div>
+        
+        <div className="flex justify-between text-sm text-gray-600 mb-8">
+          <span>စပြီး</span>
+          <span>10%</span>
+          <span>ပြီးဆုံး</span>
+        </div>
+        
+        {/* Click Instruction */}
+        <div className="text-center p-4 bg-gradient-to-r from-amber-100 to-orange-100 rounded-xl border border-amber-200 shadow-sm">
+          <p className="text-amber-800 font-medium mb-1">မြန်မြန်ဆက်လုပ်ရန်</p>
+          <p className="text-amber-600 text-sm">မြင်းပေါ်ကိုနှိပ်ပါ 🏇</p>
+        </div>
       </div>
-
-    );
-
-  }
+      
+      {/* Style for animations */}
+      <style jsx>{`
+        @keyframes horseRun {
+          0% { transform: translateX(0); }
+          100% { transform: translateX(calc(100vw - 100px)); }
+        }
+        
+        @keyframes leg1 {
+          0%, 100% { transform: translateY(0); }
+          50% { transform: translateY(-3px); }
+        }
+        
+        @keyframes leg2 {
+          0%, 100% { transform: translateY(0); }
+          50% { transform: translateY(-5px); }
+        }
+        
+        @keyframes leg3 {
+          0%, 100% { transform: translateY(0); }
+          50% { transform: translateY(-4px); }
+        }
+        
+        @keyframes leg4 {
+          0%, 100% { transform: translateY(0); }
+          50% { transform: translateY(-2px); }
+        }
+        
+        .animate-horse-run {
+          animation: horseRun 2s linear infinite;
+        }
+        
+        .animate-leg-1 {
+          animation: leg1 0.5s ease-in-out infinite;
+        }
+        
+        .animate-leg-2 {
+          animation: leg2 0.5s ease-in-out infinite 0.1s;
+        }
+        
+        .animate-leg-3 {
+          animation: leg3 0.5s ease-in-out infinite 0.2s;
+        }
+        
+        .animate-leg-4 {
+          animation: leg4 0.5s ease-in-out infinite 0.3s;
+        }
+      `}</style>
+    </div>
+  );
+}
 
 
 
