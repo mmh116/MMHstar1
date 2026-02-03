@@ -85,31 +85,28 @@ const generateKwayPermutations = (digitsString) => {
 
 
 // Helper function to generate numbers for "ဘရိတ်" (Brake) entries
-
 const generateBrakeNumbers = (brakeDigit) => {
+  const targetDigit = parseInt(brakeDigit);
+  
+  // ဘရိတ်အတွက် နံပါတ်စာရင်း
+  const brakeCombinations = {
+    0: ["00", "19", "28", "37", "46", "55", "64", "73", "82", "91"],
+    1: ["01", "10", "29", "38", "47", "56", "65", "74", "83", "92"],
+    2: ["02", "11", "20", "39", "48", "57", "66", "75", "84", "93"],
+    3: ["03", "12", "21", "30", "49", "58", "67", "76", "85", "94"],
+    4: ["04", "13", "22", "31", "40", "59", "68", "77", "86", "95"],
+    5: ["05", "14", "23", "32", "41", "50", "69", "78", "87", "96"],
+    6: ["06", "15", "24", "33", "42", "51", "60", "79", "88", "97"],
+    7: ["07", "16", "25", "34", "43", "52", "61", "70", "89", "98"],
+    8: ["08", "17", "26", "35", "44", "53", "62", "71", "80", "99"],
+    9: ["09", "18", "27", "36", "45", "54", "63", "72", "81", "90"]
+  };
 
-  const numbers = new Set();
-
-  const targetLastDigit = parseInt(brakeDigit);
-
-  for (let i = 0; i <= 9; i++) {
-
-    for (let j = 0; j <= 9; j++) {
-
-      const sum = i + j;
-
-      if (sum % 10 === targetLastDigit) {
-
-        numbers.add(`${i}${j}`);
-
-      }
-
-    }
-
+  if (targetDigit >= 0 && targetDigit <= 9) {
+    return brakeCombinations[targetDigit];
   }
-
-  return Array.from(numbers).sort();
-
+  
+  return [];
 };
 
 
@@ -2352,58 +2349,45 @@ const parseExistingPatterns = (cleanLine, originalLine, parsed, errors, lineInde
   }
 
   // Brake (e.g., "5ဘရိတ်1000")
-
-  else if ((match = cleanLine.match(patterns.brake))) {
-
-    matchFound = true;
-
-    const brakeDigit = parseInt(match[1]);
-
-    const amount = parseInt(match[2]);
-
-    if (!isNaN(brakeDigit) && brakeDigit >= 0 && brakeDigit <= 9 && !isNaN(amount)) {
-
-      const brakeNumbers = generateBrakeNumbers(brakeDigit);
-
-      if (brakeNumbers.length > 0) {
-
-        brakeNumbers.forEach(num => parsed.push({
-
-          number: num,
-
-          amount: amount
-
-        }));
-
-      } else {
-
-        errors.push({
-
-          originalLine: originalLine,
-
-          message: `'${brakeDigit}' ဘရိတ်အတွက် ဂဏန်းများ ထုတ်၍ မရပါ။`,
-
-          lineNumber: lineIndex + 1
-
-        });
-
-      }
-
+else if ((match = cleanLine.match(patterns.brake))) {
+  matchFound = true;
+  const brakeDigit = parseInt(match[1]);
+  const amount = parseInt(match[2]);
+  
+  if (!isNaN(brakeDigit) && brakeDigit >= 0 && brakeDigit <= 9 && !isNaN(amount)) {
+    const brakeNumbers = generateBrakeNumbers(brakeDigit);
+    if (brakeNumbers.length > 0) {
+      brakeNumbers.forEach(num => parsed.push({
+        number: num,
+        amount: amount
+      }));
+      
+      // Reverse numbers တွေလည်း ထည့်ပေးရန် (ဘရိတ်မှာ R ပါသလိုဖြစ်အောင်)
+      const reversedBrakeNumbers = brakeNumbers.map(num => num[1] + num[0]);
+      const allBrakeNumbers = [...new Set([...brakeNumbers, ...reversedBrakeNumbers])];
+      
+      // Clear and add all numbers
+      parsed.splice(parsed.length - brakeNumbers.length, brakeNumbers.length); // Remove previous entries
+      allBrakeNumbers.forEach(num => parsed.push({
+        number: num,
+        amount: amount
+      }));
+      
     } else {
-
       errors.push({
-
         originalLine: originalLine,
-
-        message: "ဘရိတ်ဂဏန်း သို့မဟုတ် ပမာဏ မှားယွင်းပါသည်။",
-
+        message: `'${brakeDigit}' ဘရိတ်အတွက် ဂဏန်းများ ထုတ်၍ မရပါ။`,
         lineNumber: lineIndex + 1
-
       });
-
     }
-
+  } else {
+    errors.push({
+      originalLine: originalLine,
+      message: "ဘရိတ်ဂဏန်း သို့မဟုတ် ပမာဏ မှားယွင်းပါသည်။",
+      lineNumber: lineIndex + 1
+    });
   }
+}
 
   
 
@@ -2466,43 +2450,6 @@ const generateKwayPermutations = (digitsString) => {
   return [...new Set(permutations)];
 
 };
-
-
-
-// generateBrakeNumbers function (ဘရိတ်အတွက်)
-
-const generateBrakeNumbers = (brakeDigit) => {
-
-  const brakeNumbers = [];
-
-  
-
-  for (let i = 0; i < 100; i++) {
-
-    const numStr = String(i).padStart(2, '0');
-
-    const digit1 = parseInt(numStr[0]);
-
-    const digit2 = parseInt(numStr[1]);
-
-    
-
-    // ဘရိတ်ဂဏန်းကို ပေါင်းပြီး ဘရိတ်ဂဏန်းရှိရင်
-
-    if (digit1 + digit2 === brakeDigit) {
-
-      brakeNumbers.push(numStr);
-
-    }
-
-  }
-
-  
-
-  return brakeNumbers;
-
-};
-
 
 
   // --- Add a new entry to Firestore ---
