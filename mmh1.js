@@ -182,7 +182,194 @@ const Settings = ({ size = 18, className = '' }) => <svg xmlns="http://www.w3.or
 
 const Send = ({ size = 18, className = '' }) => <svg xmlns="http://www.w3.org/2000/svg" width={size} height={size} viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" className={className}><path d="m22 2-7 20-4-9-9-4 20-7Z"/><path d="M15 15l-5 5"/></svg>;
 
-
+// LoadingSpinner Component (App component ရဲ့ အပြင်မှာ ထည့်ပါ)
+const LoadingSpinner = ({ setIsLoading, db, dataIdentifier }) => {
+  const [progress, setProgress] = React.useState(0);
+  const [message, setMessage] = React.useState('Firebase ချိတ်ဆက်နေသည်...');
+  
+  React.useEffect(() => {
+    let currentProgress = 0;
+    let interval;
+    
+    const startProgress = () => {
+      interval = setInterval(() => {
+        currentProgress += 3; // 3% each step
+        if (currentProgress > 100) currentProgress = 100;
+        
+        setProgress(currentProgress);
+        
+        // Update messages based on progress
+        if (currentProgress < 30) {
+          setMessage('Firebase ချိတ်ဆက်နေသည်...');
+        } else if (currentProgress < 60) {
+          setMessage('ဒေတာများ လှမ်းယူနေသည်...');
+        } else if (currentProgress < 90) {
+          setMessage('အက်ပ်ပြင်ဆင်နေသည်...');
+        } else {
+          setMessage('ပြီးဆုံးရန် အဆင်သင့်ဖြစ်နေပါပြီ...');
+        }
+        
+        // Check if Firebase is ready AND progress is complete
+        if (currentProgress >= 100 && db && dataIdentifier) {
+          clearInterval(interval);
+          setTimeout(() => setIsLoading(false), 500);
+        }
+      }, 100); // Update every 100ms
+    };
+    
+    // Start progress after a short delay
+    const timeout = setTimeout(startProgress, 300);
+    
+    return () => {
+      clearInterval(interval);
+      clearTimeout(timeout);
+    };
+  }, [db, dataIdentifier, setIsLoading]);
+  
+  // Calculate circle rotation
+  const rotation = (progress * 3.6) - 90;
+  const circleStyle = {
+    borderTopColor: '#3b82f6',
+    borderRightColor: progress > 25 ? '#3b82f6' : 'transparent',
+    borderBottomColor: progress > 50 ? '#3b82f6' : 'transparent',
+    borderLeftColor: progress > 75 ? '#3b82f6' : 'transparent',
+    transform: `rotate(${rotation}deg)`,
+    transition: 'all 0.3s ease-out'
+  };
+  
+  // Helper function to get loading message
+  const getLoadingMessage = (progress) => {
+    if (progress < 20) return "Firebase ချိတ်ဆက်နေသည်...";
+    if (progress < 50) return "ထိုးသူစာရင်းများ လှမ်းယူနေသည်...";
+    if (progress < 80) return "ရလဒ်များ စစ်ဆေးနေသည်...";
+    if (progress < 100) return "အက်ပ်ပြင်ဆင်နေသည်...";
+    return "အောင်မြင်စွာ ပြီးဆုံးပါပြီ!";
+  };
+  
+  // Helper function to get estimated time
+  const getEstimatedTime = (progress) => {
+    if (progress >= 100) return "0s";
+    const remaining = 100 - progress;
+    const seconds = Math.max(1, Math.ceil(remaining / 10));
+    return seconds + "s";
+  };
+  
+  return (
+    <>
+      {/* Circular Progress Bar with counting animation */}
+      <div className="relative flex items-center justify-center mb-8">
+        <div className="relative w-48 h-48">
+          {/* Outer circle */}
+          <div className="absolute inset-0 rounded-full border-8 border-gray-200"></div>
+          
+          {/* Progress circle - dynamic based on percentage */}
+          <div 
+            className="absolute inset-0 rounded-full border-8 border-transparent"
+            style={circleStyle}
+          ></div>
+          
+          {/* Progress text in center with counting animation */}
+          <div className="absolute inset-0 flex flex-col items-center justify-center">
+            <div className="text-5xl font-bold text-blue-600 mb-1 transition-all duration-300">
+              {Math.round(progress)}%
+            </div>
+            <div className="text-sm text-gray-600">
+              ပြင်ဆင်ပြီး
+            </div>
+          </div>
+        </div>
+      </div>
+      
+      {/* Simulated loading stages */}
+      <div className="w-full max-w-md mx-auto mb-8">
+        <div className="space-y-4">
+          {/* Stage 1: Firebase Connection */}
+          <div className="flex items-center justify-between">
+            <div className="flex items-center">
+              <div className={`w-3 h-3 rounded-full mr-3 ${progress > 20 ? 'bg-green-500 animate-pulse' : 'bg-gray-300'}`}></div>
+              <span className="text-sm text-gray-700">Firebase ချိတ်ဆက်ခြင်း</span>
+            </div>
+            <span className="text-sm font-bold text-gray-700">
+              {progress > 20 ? '✓' : '...'}
+            </span>
+          </div>
+          
+          {/* Stage 2: User Data */}
+          <div className="flex items-center justify-between">
+            <div className="flex items-center">
+              <div className={`w-3 h-3 rounded-full mr-3 ${progress > 50 ? 'bg-blue-500 animate-pulse' : 'bg-gray-300'}`}></div>
+              <span className="text-sm text-gray-700">ထိုးသူစာရင်းများ ယူနေသည်</span>
+            </div>
+            <span className="text-sm font-bold text-gray-700">
+              {Math.min(100, Math.max(0, (progress - 20) * 1.67))}%
+            </span>
+          </div>
+          
+          {/* Stage 3: Daily Results */}
+          <div className="flex items-center justify-between">
+            <div className="flex items-center">
+              <div className={`w-3 h-3 rounded-full mr-3 ${progress > 80 ? 'bg-purple-500 animate-pulse' : 'bg-gray-300'}`}></div>
+              <span className="text-sm text-gray-700">ရလဒ်များ စစ်ဆေးခြင်း</span>
+            </div>
+            <span className="text-sm font-bold text-gray-700">
+              {Math.min(100, Math.max(0, (progress - 50) * 2))}%
+            </span>
+          </div>
+        </div>
+      </div>
+      
+      {/* Current status message */}
+      <div className="text-center mb-8">
+        <div className="inline-block bg-gradient-to-r from-amber-100 to-orange-100 px-6 py-3 rounded-xl shadow-sm">
+          <div className="flex items-center justify-center space-x-2">
+            <div className="relative">
+              <div className={`w-3 h-3 rounded-full ${progress < 100 ? 'bg-blue-500 animate-ping' : 'bg-green-500'}`}></div>
+            </div>
+            <div className="text-gray-700 text-sm">
+              {getLoadingMessage(progress)}
+            </div>
+          </div>
+        </div>
+      </div>
+      
+      {/* Estimated time remaining */}
+      <div className="text-center">
+        <div className="inline-block bg-gradient-to-r from-blue-50 to-cyan-50 px-6 py-3 rounded-xl shadow-sm border border-blue-100">
+          <div className="flex items-center justify-center space-x-2">
+            <svg className="w-5 h-5 text-blue-500" fill="none" stroke="currentColor" viewBox="0 0 24 24" xmlns="http://www.w3.org/2000/svg">
+              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M12 8v4l3 3m6-3a9 9 0 11-18 0 9 9 0 0118 0z"></path>
+            </svg>
+            <div className="text-gray-600 text-sm">ခန့်မှန်းခြောက်ချိန်:</div>
+            <div className="text-lg font-bold text-blue-600">
+              {getEstimatedTime(progress)}
+            </div>
+          </div>
+        </div>
+      </div>
+      
+      {/* CSS for animations */}
+      <style>{`
+        @keyframes pulse {
+          0%, 100% { opacity: 1; }
+          50% { opacity: 0.5; }
+        }
+        
+        .animate-pulse {
+          animation: pulse 1s ease-in-out infinite;
+        }
+        
+        @keyframes ping {
+          0% { transform: scale(1); opacity: 1; }
+          100% { transform: scale(2); opacity: 0; }
+        }
+        
+        .animate-ping {
+          animation: ping 1s ease-in-out infinite;
+        }
+      `}</style>
+    </>
+  );
+};
 
 
 
@@ -3494,155 +3681,23 @@ const generateKwayPermutations = (digitsString) => {
   }, [showKaTheeModal, summary]);
 
 
-
-  // Render a loading spinner if Firebase is still initializing
-
-  // Render a horse running loading animation
+// Loading animation - 0 ကနေ 100 အထိ အလုပ်လုပ်မယ်
 if (isLoading) {
   return (
-    <div 
-      className="min-h-screen bg-gradient-to-br from-amber-50 to-orange-50 flex flex-col items-center justify-center font-inter text-gray-800 px-4"
-      onClick={() => {
-        playStartupSound();
-        setTimeout(() => {
-          setIsLoading(false);
-        }, 100);
-      }}
-      style={{ cursor: 'pointer' }}
-    >
+    <div className="min-h-screen bg-gradient-to-br from-amber-50 to-orange-50 flex flex-col items-center justify-center font-inter text-gray-800 px-4">
       <div className="w-full max-w-md mb-8">
         {/* Title */}
         <div className="text-center mb-10">
           <h1 className="text-3xl font-bold text-amber-800 mb-2">ဂဏန်းထိုးစာရင်း</h1>
-          <p className="text-gray-600">မြင်းပြေးနေဆဲ... ခဏစောင့်ပါ</p>
+          <p className="text-gray-600">ဒေတာများ ပြင်ဆင်နေပါသည်...</p>
         </div>
         
-        {/* Horse Running Track */}
-        <div className="relative mb-12">
-          {/* Track Line */}
-          <div className="w-full h-1 bg-gray-300 rounded-full mb-8"></div>
-          
-          {/* Dotted Track Lines */}
-          <div className="absolute top-0 left-0 w-full h-1 flex justify-between">
-            {[...Array(20)].map((_, i) => (
-              <div key={i} className="w-1 h-1 bg-gray-400 rounded-full"></div>
-            ))}
-          </div>
-          
-          {/* Horse SVG Animation */}
-          <div className="absolute -top-10 left-0 animate-horse-run" style={{ animationDuration: '2s', animationIterationCount: 'infinite' }}>
-            <svg width="60" height="60" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
-              {/* Horse Body */}
-              <path d="M8 10L10 8L12 6L14 8L16 10" stroke="#92400e" strokeLinecap="round"/>
-              <path d="M10 8L8 12L6 14" stroke="#92400e"/>
-              <path d="M14 8L16 12L18 14" stroke="#92400e"/>
-              {/* Horse Legs */}
-              <path d="M7 14L7 18" stroke="#78350f" className="animate-leg-1"/>
-              <path d="M9 13L9 17" stroke="#78350f" className="animate-leg-2"/>
-              <path d="M15 13L15 17" stroke="#78350f" className="animate-leg-3"/>
-              <path d="M17 14L17 18" stroke="#78350f" className="animate-leg-4"/>
-              {/* Horse Head */}
-              <circle cx="18" cy="8" r="1.5" fill="#92400e"/>
-              <path d="M19 7L21 5" stroke="#92400e"/>
-              {/* Tail */}
-              <path d="M6 12L4 10L2 12" stroke="#92400e" strokeLinecap="round"/>
-            </svg>
-          </div>
-          
-          {/* Finish Line */}
-          <div className="absolute -top-4 right-0 flex flex-col items-center">
-            <div className="w-2 h-8 bg-red-500"></div>
-            <div className="w-2 h-8 bg-white"></div>
-            <div className="w-2 h-8 bg-red-500"></div>
-            <span className="text-xs mt-2 text-red-600 font-bold">FINISH</span>
-          </div>
-        </div>
-        
-        {/* Progress Text */}
-        <div className="text-center mb-6">
-          <div className="inline-flex items-center space-x-2 bg-amber-100 px-4 py-2 rounded-full">
-            <svg className="animate-spin h-4 w-4 text-amber-600" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24">
-              <circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4"></circle>
-              <path className="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z"></path>
-            </svg>
-            <span className="text-amber-700 font-medium">ဒေတာများ ပြင်ဆင်နေပါသည်...</span>
-          </div>
-        </div>
-        
-        {/* Progress Bar */}
-        <div className="w-full bg-gray-200 rounded-full h-3 mb-2">
-          <div 
-            className="bg-gradient-to-r from-amber-400 to-orange-500 h-3 rounded-full animate-pulse transition-all duration-1000" 
-            style={{ width: '75%' }}
-          ></div>
-        </div>
-        
-        <div className="flex justify-between text-sm text-gray-600 mb-8">
-          <span>စပြီး</span>
-          <span>10%</span>
-          <span>ပြီးဆုံး</span>
-        </div>
-        
-        {/* Click Instruction */}
-        <div className="text-center p-4 bg-gradient-to-r from-amber-100 to-orange-100 rounded-xl border border-amber-200 shadow-sm">
-          <p className="text-amber-800 font-medium mb-1">မြန်မြန်ဆက်လုပ်ရန်</p>
-          <p className="text-amber-600 text-sm">မြင်းပေါ်ကိုနှိပ်ပါ 🏇</p>
-        </div>
+        {/* LoadingSpinner Component */}
+        <LoadingSpinner setIsLoading={setIsLoading} db={db} dataIdentifier={dataIdentifier} />
       </div>
-      
-      {/* Style for animations */}
-      <style jsx>{`
-        @keyframes horseRun {
-          0% { transform: translateX(0); }
-          100% { transform: translateX(calc(100vw - 100px)); }
-        }
-        
-        @keyframes leg1 {
-          0%, 100% { transform: translateY(0); }
-          50% { transform: translateY(-3px); }
-        }
-        
-        @keyframes leg2 {
-          0%, 100% { transform: translateY(0); }
-          50% { transform: translateY(-5px); }
-        }
-        
-        @keyframes leg3 {
-          0%, 100% { transform: translateY(0); }
-          50% { transform: translateY(-4px); }
-        }
-        
-        @keyframes leg4 {
-          0%, 100% { transform: translateY(0); }
-          50% { transform: translateY(-2px); }
-        }
-        
-        .animate-horse-run {
-          animation: horseRun 2s linear infinite;
-        }
-        
-        .animate-leg-1 {
-          animation: leg1 0.5s ease-in-out infinite;
-        }
-        
-        .animate-leg-2 {
-          animation: leg2 0.5s ease-in-out infinite 0.1s;
-        }
-        
-        .animate-leg-3 {
-          animation: leg3 0.5s ease-in-out infinite 0.2s;
-        }
-        
-        .animate-leg-4 {
-          animation: leg4 0.5s ease-in-out infinite 0.3s;
-        }
-      `}</style>
     </div>
   );
 }
-
-
-
   // Main App JSX Structure
 
   return (
