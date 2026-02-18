@@ -108,11 +108,7 @@ const generateBrakeNumbers = (brakeDigit) => {
   
   return [];
 };
-
-
-
 // =================== အသံထွက်ရန် function ===================
-
 const playSuccessSound = () => {
   try {
     const audioContext = new (window.AudioContext || window.webkitAudioContext)();
@@ -122,22 +118,27 @@ const playSuccessSound = () => {
     oscillator.connect(gainNode);
     gainNode.connect(audioContext.destination);
     
-    // ပျော်စရာအသံ
-    oscillator.type = 'square';
+    // 🚂 ရထားဟွန်းသံပုံစံ
+    oscillator.type = 'sine'; // ချောမွေ့တဲ့ ဝီစီသံအတွက်
     
-    // တီတီတာတာအသံအတွက် frequency ကိုပြောင်းမယ်
-    oscillator.frequency.setValueAtTime(523.25, audioContext.currentTime); // C5
-    oscillator.frequency.setValueAtTime(659.25, audioContext.currentTime + 0.1); // E5
-    oscillator.frequency.setValueAtTime(783.99, audioContext.currentTime + 0.2); // G5
+    const now = audioContext.currentTime;
     
-    gainNode.gain.setValueAtTime(0.3, audioContext.currentTime);
-    gainNode.gain.exponentialRampToValueAtTime(0.01, audioContext.currentTime + 0.3);
+    // ရထားဟွန်းသံရဲ့ ကြိမ်နှုန်း (အနိမ့်ကနေ အမြင့်ကို တဖြည်းဖြည်းတက်)
+    oscillator.frequency.setValueAtTime(400, now); // စတဲ့အသံ
+    oscillator.frequency.exponentialRampToValueAtTime(800, now + 1.5); // ၁.၅ စက္ကန့်အတွင်း မြင့်တက်သွား
     
-    oscillator.start(audioContext.currentTime);
-    oscillator.stop(audioContext.currentTime + 0.3);
+    // အသံအတိုးအကျယ် (တဖြည်းဖြည်းကျယ်လာပြီး တဖြည်းဖြည်းတိုးသွား)
+    gainNode.gain.setValueAtTime(0.1, now);
+    gainNode.gain.linearRampToValueAtTime(0.5, now + 0.3); // ကျယ်လာ
+    gainNode.gain.linearRampToValueAtTime(0.4, now + 1.2); // နည်းနည်းထိန်း
+    gainNode.gain.linearRampToValueAtTime(0.01, now + 1.8); // တိုးသွား
+    
+    oscillator.start(now);
+    oscillator.stop(now + 1.8); // ၁.၈ စက္ကန့်ကြာ
     
   } catch (error) {
     console.log("Audio error:", error);
+    // Fallback အသံ
     try {
       const beep = new Audio("data:audio/wav;base64,UklGRigAAABXQVZFZm10IBIAAAABAAEARKwAAIhYAQACABAAZGF0YQQAAAAAAA==");
       beep.volume = 0.3;
@@ -147,6 +148,7 @@ const playSuccessSound = () => {
     }
   }
 };
+
 
 
 
