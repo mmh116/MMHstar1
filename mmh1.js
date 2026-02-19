@@ -112,29 +112,51 @@ const generateBrakeNumbers = (brakeDigit) => {
 const playSuccessSound = () => {
   try {
     const audioContext = new (window.AudioContext || window.webkitAudioContext)();
-    const oscillator = audioContext.createOscillator();
-    const gainNode = audioContext.createGain();
     
-    oscillator.connect(gainNode);
-    gainNode.connect(audioContext.destination);
-    
-    // 🚂 ရထားဟွန်းသံပုံစံ
-    oscillator.type = 'sine'; // ချောမွေ့တဲ့ ဝီစီသံအတွက်
-    
+    // သတိပေးချက်အသံရှည်ကြီး (အဆင့်မြင့်)
     const now = audioContext.currentTime;
     
-    // ရထားဟွန်းသံရဲ့ ကြိမ်နှုန်း (အနိမ့်ကနေ အမြင့်ကို တဖြည်းဖြည်းတက်)
-    oscillator.frequency.setValueAtTime(400, now); // စတဲ့အသံ
-    oscillator.frequency.exponentialRampToValueAtTime(800, now + 1.5); // ၁.၅ စက္ကန့်အတွင်း မြင့်တက်သွား
+    // oscillator ၂ ခုကို ရောမယ်
+    const osc1 = audioContext.createOscillator();
+    const osc2 = audioContext.createOscillator();
+    const gainNode = audioContext.createGain();
+    
+    osc1.connect(gainNode);
+    osc2.connect(gainNode);
+    gainNode.connect(audioContext.destination);
+    
+    osc1.type = 'sawtooth';
+    osc2.type = 'sawtooth';
+    
+    // အသံကို အတက်အဆင်းလုပ်မယ် (siren လိုမျိုး)
+    for (let i = 0; i < 5; i++) {
+      const timeOffset = i * 0.6;
+      
+      // အတက်
+      osc1.frequency.setValueAtTime(600, now + timeOffset);
+      osc1.frequency.exponentialRampToValueAtTime(1200, now + timeOffset + 0.3);
+      
+      // အဆင်း
+      osc1.frequency.setValueAtTime(1200, now + timeOffset + 0.3);
+      osc1.frequency.exponentialRampToValueAtTime(600, now + timeOffset + 0.6);
+      
+      // ဒုတိယအသံက နည်းနည်းလိုက်စောင်း
+      osc2.frequency.setValueAtTime(650, now + timeOffset + 0.05);
+      osc2.frequency.exponentialRampToValueAtTime(1250, now + timeOffset + 0.35);
+      osc2.frequency.setValueAtTime(1250, now + timeOffset + 0.35);
+      osc2.frequency.exponentialRampToValueAtTime(650, now + timeOffset + 0.65);
+    }
     
     // အသံအတိုးအကျယ် (တဖြည်းဖြည်းကျယ်လာပြီး တဖြည်းဖြည်းတိုးသွား)
     gainNode.gain.setValueAtTime(0.1, now);
-    gainNode.gain.linearRampToValueAtTime(0.5, now + 0.3); // ကျယ်လာ
-    gainNode.gain.linearRampToValueAtTime(0.4, now + 1.2); // နည်းနည်းထိန်း
-    gainNode.gain.linearRampToValueAtTime(0.01, now + 1.8); // တိုးသွား
+    gainNode.gain.linearRampToValueAtTime(0.7, now + 1.0);
+    gainNode.gain.linearRampToValueAtTime(0.6, now + 2.0);
+    gainNode.gain.linearRampToValueAtTime(0.01, now + 3.0);
     
-    oscillator.start(now);
-    oscillator.stop(now + 1.8); // ၁.၈ စက္ကန့်ကြာ
+    osc1.start(now);
+    osc2.start(now);
+    osc1.stop(now + 3.0);
+    osc2.stop(now + 3.0);
     
   } catch (error) {
     console.log("Audio error:", error);
@@ -148,9 +170,6 @@ const playSuccessSound = () => {
     }
   }
 };
-
-
-
 
 // Re-mapping Lucide React icons to simple inline SVGs
 
