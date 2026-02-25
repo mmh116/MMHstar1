@@ -113,50 +113,46 @@ const playSuccessSound = () => {
   try {
     const audioContext = new (window.AudioContext || window.webkitAudioContext)();
     
-    // သတိပေးချက်အသံရှည်ကြီး (အဆင့်မြင့်)
+    // ကျေးတောငှက်သံ (ထူးခြားတဲ့အသံ)
     const now = audioContext.currentTime;
     
-    // oscillator ၂ ခုကို ရောမယ်
+    // အသံ ၂ ခု တပြိုင်နက်
     const osc1 = audioContext.createOscillator();
     const osc2 = audioContext.createOscillator();
-    const gainNode = audioContext.createGain();
+    const gain1 = audioContext.createGain();
+    const gain2 = audioContext.createGain();
     
-    osc1.connect(gainNode);
-    osc2.connect(gainNode);
-    gainNode.connect(audioContext.destination);
+    osc1.connect(gain1);
+    osc2.connect(gain2);
+    gain1.connect(audioContext.destination);
+    gain2.connect(audioContext.destination);
     
+    // ပထမအသံ (မြင့်)
     osc1.type = 'sawtooth';
-    osc2.type = 'sawtooth';
+    osc1.frequency.setValueAtTime(900, now);
+    osc1.frequency.setValueAtTime(850, now + 0.1);
+    osc1.frequency.setValueAtTime(950, now + 0.2);
+    osc1.frequency.setValueAtTime(900, now + 0.3);
     
-    // အသံကို အတက်အဆင်းလုပ်မယ် (siren လိုမျိုး)
-    for (let i = 0; i < 5; i++) {
-      const timeOffset = i * 0.6;
-      
-      // အတက်
-      osc1.frequency.setValueAtTime(600, now + timeOffset);
-      osc1.frequency.exponentialRampToValueAtTime(1200, now + timeOffset + 0.3);
-      
-      // အဆင်း
-      osc1.frequency.setValueAtTime(1200, now + timeOffset + 0.3);
-      osc1.frequency.exponentialRampToValueAtTime(600, now + timeOffset + 0.6);
-      
-      // ဒုတိယအသံက နည်းနည်းလိုက်စောင်း
-      osc2.frequency.setValueAtTime(650, now + timeOffset + 0.05);
-      osc2.frequency.exponentialRampToValueAtTime(1250, now + timeOffset + 0.35);
-      osc2.frequency.setValueAtTime(1250, now + timeOffset + 0.35);
-      osc2.frequency.exponentialRampToValueAtTime(650, now + timeOffset + 0.65);
-    }
+    gain1.gain.setValueAtTime(0.3, now);
+    gain1.gain.linearRampToValueAtTime(0.2, now + 0.2);
+    gain1.gain.linearRampToValueAtTime(0.01, now + 0.4);
     
-    // အသံအတိုးအကျယ် (တဖြည်းဖြည်းကျယ်လာပြီး တဖြည်းဖြည်းတိုးသွား)
-    gainNode.gain.setValueAtTime(0.1, now);
-    gainNode.gain.linearRampToValueAtTime(0.7, now + 1.0);
-    gainNode.gain.linearRampToValueAtTime(0.6, now + 2.0);
-    gainNode.gain.linearRampToValueAtTime(0.01, now + 3.0);
+    // ဒုတိယအသံ (နိမ့်)
+    osc2.type = 'triangle';
+    osc2.frequency.setValueAtTime(400, now + 0.05);
+    osc2.frequency.setValueAtTime(380, now + 0.15);
+    osc2.frequency.setValueAtTime(420, now + 0.25);
+    osc2.frequency.setValueAtTime(400, now + 0.35);
+    
+    gain2.gain.setValueAtTime(0.2, now + 0.05);
+    gain2.gain.linearRampToValueAtTime(0.1, now + 0.25);
+    gain2.gain.linearRampToValueAtTime(0.01, now + 0.45);
     
     osc1.start(now);
-    osc2.start(now);
-    osc1.stop(now + 3.0);
-    osc2.stop(now + 3.0);
+    osc2.start(now + 0.05);
+    osc1.stop(now + 0.4);
+    osc2.stop(now + 0.45);
     
   } catch (error) {
     console.log("Audio error:", error);
@@ -204,7 +200,8 @@ const Settings = ({ size = 18, className = '' }) => <svg xmlns="http://www.w3.or
 const Send = ({ size = 18, className = '' }) => <svg xmlns="http://www.w3.org/2000/svg" width={size} height={size} viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" className={className}><path d="m22 2-7 20-4-9-9-4 20-7Z"/><path d="M15 15l-5 5"/></svg>;
 
 // LoadingSpinner Component (App component ရဲ့ အပြင်မှာ ထည့်ပါ)
-const LoadingSpinner = ({ setIsLoading, db, dataIdentifier }) => {
+
+	const LoadingSpinner = ({ setIsLoading, db, dataIdentifier, isFirebaseReady, isDataLoaded }) => {
   const [progress, setProgress] = React.useState(0);
   const [message, setMessage] = React.useState('Firebase ချိတ်ဆက်နေသည်...');
   
@@ -408,7 +405,8 @@ const App = () => {
 
   const [isLoading, setIsLoading] = React.useState(true); // Initial loading state for Firebase init and data fetch
 
-
+const [isFirebaseReady, setIsFirebaseReady] = React.useState(false);
+const [isDataLoaded, setIsDataLoaded] = React.useState(false);
 
   // --- Data Identifier State (for persistence across sessions) ---
 
@@ -637,6 +635,7 @@ const App = () => {
       if (user) {
 
         setUserId(user.uid);
+        setIsFirebaseReady(true);
 
         console.log("Firebase Auth State Changed: Logged in as", user.uid);
 
@@ -653,6 +652,7 @@ const App = () => {
           } else {
 
             await window.firebase.signInAnonymously(authInstance);
+            setIsFirebaseReady(true);
 
           }
 
@@ -666,7 +666,6 @@ const App = () => {
 
       }
 
-      setIsLoading(false);
 
     });
 
