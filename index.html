@@ -11,10 +11,28 @@
 <body class="bg-gray-100">
 <div id="root"></div>
 
+<!-- React CDN -->
 <script crossorigin src="https://unpkg.com/react@18/umd/react.production.min.js"></script>
 <script crossorigin src="https://unpkg.com/react-dom@18/umd/react-dom.production.min.js"></script>
-<script src="https://unpkg.com/@babel/standalone/babel.min.js"></script>
 
+<!-- ====== 🔥 Firebase Config - သီးခြား Script (module မဟုတ်ဘူး) ====== -->
+<script>
+    window.__app_id = "1:602585837585:web:470e15eb4a5fd4d64d81b0";
+    window.__firebase_config = {
+        apiKey: "AIzaSyDUf0QF4GqMb6s9ODTUiX7aTHRTR0YUqcE",
+        authDomain: "html-3ce83.firebaseapp.com",
+        databaseURL: "https://html-3ce83-default-rtdb.asia-southeast1.firebasedatabase.app",
+        projectId: "html-3ce83",
+        storageBucket: "html-3ce83.firebasestorage.app",
+        messagingSenderId: "602585837585",
+        appId: "1:602585837585:web:470e15eb4a5fd4d64d81b0",
+        measurementId: "G-44BG2J1XQ3"
+    };
+    window.__initial_auth_token = "";
+    console.log("✅ Firebase Config loaded:", window.__firebase_config);
+</script>
+
+<!-- ====== 🔥 Firebase SDK - Module Script ====== -->
 <script type="module">
     import { initializeApp } from "https://www.gstatic.com/firebasejs/10.6.0/firebase-app.js";
     import { getAuth, signInAnonymously, signInWithCustomToken, onAuthStateChanged } from "https://www.gstatic.com/firebasejs/10.6.0/firebase-auth.js";
@@ -25,21 +43,13 @@
         getAuth, signInAnonymously, signInWithCustomToken, onAuthStateChanged,
         getFirestore, collection, query, onSnapshot, addDoc, setDoc, deleteDoc, doc, getDoc, getDocs, updateDoc, where
     };
-
-    window.__app_id = "1:602585837585:web:470e15eb4a5fd4d64d81b0";
-    window.__firebase_config = JSON.stringify({
-        apiKey: "AIzaSyDUf0QF4GqMb6s9ODTUiX7aTHRTR0YUqcE",
-        authDomain: "html-3ce83.firebaseapp.com",
-        databaseURL: "https://html-3ce83-default-rtdb.asia-southeast1.firebasedatabase.app",
-        projectId: "html-3ce83",
-        storageBucket: "html-3ce83.firebasestorage.app",
-        messagingSenderId: "602585837585",
-        appId: "1:602585837585:web:470e15eb4a5fd4d64d81b0",
-        measurementId: "G-44BG2J1XQ3"
-    });
-    window.__initial_auth_token = ""; 
+    console.log("✅ Firebase SDK loaded");
 </script>
 
+<!-- ====== Babel Standalone ====== -->
+<script src="https://unpkg.com/@babel/standalone@7.23.0/babel.min.js"></script>
+
+<!-- ====== သင့် App ====== -->
 <script type="text/babel" data-presets="react,es2015" src="mmh1.js"></script>
 
 </body>
