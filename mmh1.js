@@ -594,14 +594,12 @@ const [isDataLoaded, setIsDataLoaded] = React.useState(false);
 
 
 
+
+
   // --- Firebase Initialization and Authentication ---
-
-  React.useEffect(() => {
-
+React.useEffect(() => {
     const appId = typeof window.__app_id !== 'undefined' ? window.__app_id : 'default-app-id';
-
-    const firebaseConfig = typeof window.__firebase_config !== 'undefined' ? JSON.parse(window.__firebase_config) : {};
-
+    const firebaseConfig = typeof window.__firebase_config !== 'undefined' ? window.__firebase_config : {};  // ✅ JSON.parse ဖယ်လိုက်
     const initialAuthToken = typeof window.__initial_auth_token !== 'undefined' ? window.__initial_auth_token : '';
 
 
